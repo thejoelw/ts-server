@@ -1,0 +1,39 @@
+ROOT = $(TUP_CWD)
+DEFINES_CONFIG_FILE = $(ROOT)/defines.cfg
+SRC_PATH = $(ROOT)/src
+THIRD_PARTY_PATH = $(ROOT)/third_party
+
+BIN_TARGET = $(ROOT)/ts-server
+
+CFLAGS += -std=c++17
+CFLAGS += -Wall -Werror -Wno-missing-braces -Wno-unused -Wno-expansion-to-defined
+CFLAGS += -I$(SRC_PATH) -I$(THIRD_PARTY_PATH) -I$(THIRD_PARTY_PATH)/spdlog/include -I$(THIRD_PARTY_PATH)/rapidjson/include -I$(THIRD_PARTY_PATH)/websocketpp
+
+ifeq (@(BUILD_TYPE),debug)
+    # CFLAGS += -fsanitize=undefined,address
+    # LDFLAGS += -fsanitize=undefined,address
+
+    CFLAGS += -O0 -g -fdebug-prefix-map=`pwd`=`pwd | sed 's/\/\.tup\/.*//'`
+endif
+ifeq (@(BUILD_TYPE),release)
+    CFLAGS += -O3 -march=native -ffast-math -fno-finite-math-only -fvisibility=hidden -DNDEBUG
+endif
+
+ifeq (@(TUP_PLATFORM),macosx)
+    CC = clang
+    CXX = clang++
+
+    CFLAGS += -stdlib=libc++
+    LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd
+else
+    CC = gcc
+    CXX = g++
+
+    CFLAGS += -Wno-psabi
+    LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd
+endif
+
+!cpp = |> $(CXX) $(CFLAGS) $(CFLAGS_%f) -c %f -o %o |> %f.o $(ROOT)/<src_objects>
+# !archive = |> ar rs %o |>
+!link = |> $(CXX) $(CFLAGS) $(LDFLAGS) -o %o %<src_objects> |> $(BIN_TARGET)
+!write_linker_cmd = |> echo "$(CXX) $(CFLAGS) $(LDFLAGS) -o $(BIN_TARGET) %<src_objects>" > %o |> link.sh

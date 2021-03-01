@@ -1,0 +1,15 @@
+include_rules
+
+run node util/definesWriter.js "@(NAME)"
+
+# Compile sources
+: foreach $(SRC_PATH)/*.cpp | $(ROOT)/<gen_headers> |> !cpp |>
+
+ifeq (@(DONT_LINK),1)
+# We have to write the linker command instead of executing it because the debug symbols don't get written correctly inside of tup.
+# It works better when it's executed from QtCreator.
+: | $(ROOT)/<src_objects> |> !write_linker_cmd |>
+else
+# Link program
+: | $(ROOT)/<src_objects> |> !link |>
+endif
