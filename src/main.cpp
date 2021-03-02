@@ -7,13 +7,15 @@
 #include "stream.h"
 #include "readermanager.h"
 #include "connectionmanager.h"
-#include "connection.h"
+#include "subscriberconnection.h"
+#include "publisherconnection.h"
 #include "instant.h"
 #include "wsconn.h"
+#include "baseexception.h"
 
 int main() {
     uWS::App app = uWS::App();
-    std::unordered_map<std::string, Stream> streams;
+    std::unordered_map<std::string, Stream *> streams;
 
     static constexpr unsigned int timerPeriodMs = 10;
     struct us_timer_t *timer = us_create_timer((us_loop_t *) uWS::Loop::get(), 0, 0);
@@ -22,68 +24,117 @@ int main() {
         ConnectionManager::getInstance().tick();
     }, 0, timerPeriodMs);
 
-    auto onUpgrade = [&streams](uWS::HttpResponse<false> *res, uWS::HttpRequest *req, struct us_socket_context_t *socketCtx) {
-        auto getQuery = [req](const char *key, const char *def) -> std::string {
-            std::string_view value = req->getQuery("topic");
-            return value.data() ? std::string(value) : std::string(def);
+    auto onSubUpgrade = [&streams](uWS::HttpResponse<false> *res, uWS::HttpRequest *req, struct us_socket_context_t *socketCtx) {
+        class BadRequestException : public BaseException {
+        public:
+            BadRequestException(const std::string &msg)
+                : BaseException("Bad Request: " + msg)
+            {}
         };
 
-        auto parseTime = [](const std::string &str) -> Instant {
-            return Instant::now();
-        };
+        try {
+            auto getQuery = [req](const char *key, const char *def) -> std::string {
+                std::string_view value = req->getQuery(key);
+                return value.data() ? std::string(value) : std::string(def);
+            };
 
-        res->template upgrade<Connection>(
-            Connection(&streams[getQuery("stream", "")], parseTime(getQuery("begin", "now")), parseTime(getQuery("end", "now"))),
-            req->getHeader("sec-websocket-key"),
-            req->getHeader("sec-websocket-protocol"),
-            req->getHeader("sec-websocket-extensions"),
-            socketCtx
-        );
+            auto parseTime = [](const std::string &str) -> Instant {
+                return Instant::now();
+            };
 
-        // Use defer to send messages from file reader
-        // When done, use defer to subscribe to current chunk
-        // Just think of it as a single long stream
+            std::string streamKey = getQuery("stream", "default");
+            Instant beginTime = parseTime(getQuery("begin", "now"));
+            Instant endTime = parseTime(getQuery("end", "now"));
+            std::uint64_t head = std::stoull(getQuery("head", "18446744073709551615"));
+            std::uint64_t tail = std::stoull(getQuery("tail", "18446744073709551615"));
+
+            if (head != 18446744073709551615ull && tail != 18446744073709551615ull) {
+                throw BadRequestException("Cannot specify both head and tail");
+            }
+
+            Stream *&stream = streams[streamKey];
+            if (stream == 0) {
+                stream = new Stream(streamKey);
+            }
+
+            res->template upgrade<SubscriberConnection>(
+                SubscriberConnection(stream, beginTime, endTime, head, tail),
+                req->getHeader("sec-websocket-key"),
+                req->getHeader("sec-websocket-protocol"),
+                req->getHeader("sec-websocket-extensions"),
+                socketCtx
+            );
+        } catch (const BadRequestException &ex) {
+            res->writeStatus("400")->end(ex.what());
+        }
     };
 
-    auto onOpen = [](WsConn *ws) {
-        Connection *conn = static_cast<Connection *>(ws->getUserData());
+    auto onSubOpen = [](WsConn *ws) {
+        SubscriberConnection *conn = static_cast<SubscriberConnection *>(ws->getUserData());
         conn->wsConn = ws;
         ConnectionManager::getInstance().addConnection(conn);
         ws->subscribe("broadcast");
     };
 
-    auto onMessage = [&app](WsConn *ws, std::string_view message, uWS::OpCode opCode) {
-        app.publish("broadcast", message, opCode, true);
-    };
-
-    auto onDrain = [](WsConn *ws) {
-        /* Check getBufferedAmount here */
-    };
-
-    auto onPing = [](WsConn *ws) {
-
-    };
-
-    auto onPong = [](WsConn *ws) {
-    };
-
-    auto onClose = [](WsConn *ws, int /*code*/, std::string_view /*message*/) {
-        Connection *conn = static_cast<Connection *>(ws->getUserData());
+    auto onSubClose = [](WsConn *ws, int /*code*/, std::string_view /*message*/) {
+        SubscriberConnection *conn = static_cast<SubscriberConnection *>(ws->getUserData());
         ConnectionManager::getInstance().removeConnection(conn);
     };
 
-    app.ws<Connection>("/sub", {
+    auto onPubUpgrade = [&streams](uWS::HttpResponse<false> *res, uWS::HttpRequest *req, struct us_socket_context_t *socketCtx) {
+        class BadRequestException : public BaseException {
+        public:
+            BadRequestException(const std::string &msg)
+                : BaseException("Bad Request: " + msg)
+            {}
+        };
+
+        try {
+            auto getQuery = [req](const char *key, const char *def) -> std::string {
+                std::string_view value = req->getQuery(key);
+                return value.data() ? std::string(value) : std::string(def);
+            };
+
+            std::string streamKey = getQuery("stream", "default");
+
+            Stream *&stream = streams[streamKey];
+            if (stream == 0) {
+                stream = new Stream(streamKey);
+            }
+
+            res->template upgrade<PublisherConnection>(
+                PublisherConnection(stream),
+                req->getHeader("sec-websocket-key"),
+                req->getHeader("sec-websocket-protocol"),
+                req->getHeader("sec-websocket-extensions"),
+                socketCtx
+            );
+        } catch (const BadRequestException &ex) {
+            res->writeStatus("400")->end(ex.what());
+        }
+    };
+
+    auto onPubMessage = [&app](WsConn *ws, std::string_view message, uWS::OpCode opCode) {
+        SubscriberConnection *conn = static_cast<SubscriberConnection *>(ws->getUserData());
+        conn->stream->publish(Event(Instant::now(), message.data(), message.size()));
+        app.publish(conn->stream->getKey(), message, uWS::OpCode::BINARY, true);
+    };
+
+    app.ws<SubscriberConnection>("/sub", {
         .compression = uWS::DEDICATED_COMPRESSOR_256KB,
         .maxPayloadLength = 16 * 1024 * 1024,
         .idleTimeout = 10,
         .maxBackpressure = 1 * 1024 * 1024,
-        .upgrade = onUpgrade,
-        .open = onOpen,
-        .message = onMessage,
-        .drain = onDrain,
-        .ping = onPing,
-        .pong = onPong,
-        .close = onClose
+        .upgrade = onSubUpgrade,
+        .open = onSubOpen,
+        .close = onSubClose
+    }).ws<PublisherConnection>("/pub", {
+        .compression = uWS::DEDICATED_COMPRESSOR_256KB,
+        .maxPayloadLength = 16 * 1024 * 1024,
+        .idleTimeout = 10,
+        .maxBackpressure = 1 * 1024 * 1024,
+        .upgrade = onPubUpgrade,
+        .message = onPubMessage,
     }).listen(9001, [](auto *listen_socket) {
         if (listen_socket) {
             std::cout << "Listening on port " << 9001 << std::endl;

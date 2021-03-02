@@ -2,6 +2,4 @@ src/
 third_party/
 third_party/spdlog/include/
 third_party/rapidjson/include/
-third_party/websocketpp/
 build-qtc/src/
-src

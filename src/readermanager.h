@@ -21,10 +21,6 @@ private:
         Chunk *chunk;
         moodycamel::ReaderWriterQueue<QueueMessage> queue;
         std::thread thread;
-
-        std::size_t remaining;
-
-
     };
 
 public:

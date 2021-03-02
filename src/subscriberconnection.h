@@ -4,22 +4,25 @@
 
 #include "wsconn.h"
 #include "instant.h"
+#include "baseexception.h"
 
 class Stream;
 
-class Connection {
+class SubscriberConnection {
 public:
-    Connection();
-    Connection(Stream *topic, Instant beginTime, Instant endTime);
+    SubscriberConnection();
+    SubscriberConnection(Stream *topic, Instant beginTime, Instant endTime, std::uint64_t head, std::uint64_t tail);
 
     WsConn *wsConn = 0;
 
-    Stream *topic = 0;
+    Stream *stream = 0;
     std::uint32_t nextChunkId;
     std::uint32_t nextEventId;
 
     Instant beginTime;
     Instant endTime;
+    std::uint64_t head;
+    std::uint64_t tail;
 
     void tick();
 

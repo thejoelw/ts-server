@@ -27,6 +27,8 @@ void ReaderManager::tick() {
             } else if (std::holds_alternative<Yield>(msg)) {
                 break; // Don't join immediately to give the thread some time to clean up
             } else if (std::holds_alternative<Join>(msg)) {
+                reader.chunk->recvEnd();
+
                 reader.thread.join();
                 reader.chunk = 0; // Signals that this reader can be deleted
 

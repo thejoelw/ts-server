@@ -12,8 +12,6 @@ public:
         : Consumer(consumer)
     {}
 
-    ~Decoder() {}
-
     void consumeData(const char *data, std::size_t size) {
         while (size != 0) {
             if (remainingSize != 0) {
@@ -40,26 +38,30 @@ public:
                     remainingSize -= size;
                     break;
                 }
-            } else if (metaState != 0) {
-                if (metaState >> 4) {
-                    metaState -= 0x10;
-                    std::int64_t inc = static_cast<signed char>(*data);
-                    inc *= 1ull << ((metaState >> 4) * 8);
-                    timeRegister += inc;
+            } else if (metaCtl != 0) {
+                if (metaCtl >> 4) {
+                    metaCtl -= 0x10;
+                    timeInc <<= 8;
+                    timeInc += static_cast<unsigned char>(*data);
                 } else {
-                    metaState -= 0x01;
-                    std::int64_t inc = static_cast<signed char>(*data);
-                    inc *= 1ull << (metaState * 8);
-                    sizeRegister += inc;
+                    metaCtl -= 0x01;
+                    sizeInc <<= 8;
+                    sizeInc += static_cast<unsigned char>(*data);
 
-                    if (metaState == 0) {
+                    if (metaCtl == 0) {
+                        // ZigZag decoding
+                        timeRegister += (timeInc >> 1) ^ -(timeInc & 1);
+                        sizeRegister += (sizeInc >> 1) ^ -(sizeInc & 1);
                         remainingSize = sizeRegister;
                     }
                 }
                 data++;
                 size--;
             } else {
-                metaState = *data & 0x77;
+                metaCtl = *data;
+                timeInc = 0;
+                sizeInc = 0;
+                remainingSize = sizeRegister; // In case metaState == 0
                 data++;
                 size--;
             }
@@ -73,7 +75,9 @@ public:
 private:
     std::uint64_t timeRegister = 0;
     std::uint64_t sizeRegister = 0;
-    char metaState = 0;
+    char metaCtl = 0;
+    std::uint64_t timeInc;
+    std::uint64_t sizeInc;
     std::size_t remainingSize = 0;
     std::vector<std::string_view> catMsgs;
 };

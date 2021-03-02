@@ -4,9 +4,11 @@
 
 #include "instant.h"
 #include "chunk.h"
+#include "event.h"
 #include "baseexception.h"
+#include "writermanager.h"
 
-class Connection;
+class SubscriberConnection;
 
 class Stream {
 public:
@@ -17,10 +19,20 @@ public:
         {}
     };
 
+    Stream(const std::string &key);
+
+    const std::string &getKey() const { return key; }
+
     std::uint32_t getInitChunkId(Instant beginTime);
 
-    void tick(Connection &conn);
+    void tick(SubscriberConnection &conn);
+
+    void publish(Event event);
 
 private:
+    std::string key;
+
     std::deque<Chunk> chunks;
+
+    WriterManager writerManager;
 };

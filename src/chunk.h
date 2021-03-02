@@ -6,16 +6,17 @@
 #include "instant.h"
 #include "event.h"
 
-class Connection;
+class Stream;
+class SubscriberConnection;
 
 class Chunk {
 private:
     enum class Status {Lazy, Reading, Done};
 
 public:
-    Chunk(Instant beginTime, Instant endTime)
-        : beginTime(beginTime)
-        , endTime(endTime)
+    Chunk(Stream *stream, Instant beginTime)
+        : stream(stream)
+        , beginTime(beginTime)
     {}
 
     ~Chunk() {
@@ -31,22 +32,26 @@ public:
 
     std::string getFilename() const;
 
+    std::size_t getNumEvents() const { return events.size(); }
+
     void gc();
 
     void recvEvent(Event event);
     void recvBestow(const char *data);
+    void recvEnd();
 
-    void tick(Connection &conn);
+    void tick(SubscriberConnection &conn);
 
 private:
+    Stream *stream;
+
     Instant beginTime;
-    Instant endTime;
 
     std::string data;
     std::vector<Event> events;
     std::vector<const char *> bestowed;
     Status status = Status::Lazy;
 
-    void emitEvents(Connection &conn);
+    void emitEvents(SubscriberConnection &conn);
     void freeMemory();
 };
