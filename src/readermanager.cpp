@@ -9,7 +9,7 @@
 
 void ReaderManager::addReader(Chunk *chunk) {
     readers.emplace_back(chunk, [](Reader *reader) {
-        FileReader<Decompressor<Decoder<QueuePublisher>>> pipe(Decompressor<Decoder<QueuePublisher>>(Decoder<QueuePublisher>(QueuePublisher(reader->queue))));
+        FileReader<Decompressor<Decoder<QueuePublisher>>> pipe(std::ref(reader->queue));
         pipe.read(reader->chunk->getFilename());
     });
 }

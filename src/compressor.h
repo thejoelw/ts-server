@@ -9,8 +9,9 @@
 template <typename Consumer>
 class Compressor : public Consumer {
 public:
-    Compressor(Consumer consumer)
-        : Consumer(consumer)
+    template <typename... ConsumerArgs>
+    Compressor(ConsumerArgs... args)
+        : Consumer(std::forward<ConsumerArgs>(args)...)
         , context(ZSTD_createCCtx())
         , bufSize(ZSTD_DStreamOutSize())
         , bufData(new char[bufSize])
@@ -24,7 +25,8 @@ public:
         while (true) {
             ZSTD_outBuffer output = { bufData, bufSize, 0 };
             size_t const remaining = ZSTD_compressStream2(context, &output , &input, ZSTD_e_end);
-            static_cast<Consumer *>(this)->consume(output.dst, output.pos);
+            assert(output.dst == bufData);
+            static_cast<Consumer *>(this)->consume(bufData, output.pos);
 
             if (!remaining) {
                 break;
@@ -34,14 +36,14 @@ public:
         delete[] bufData;
     }
 
-    void consume(const char *data, std::size_t size) {
+    void consumeData(const char *data, std::size_t size) {
         ZSTD_inBuffer input = { data, size, 0 };
         do {
             ZSTD_outBuffer output = { bufData, bufSize, 0 };
             size_t const res = ZSTD_compressStream2(context, &output , &input, ZSTD_e_continue);
             checkZstdRes(res);
             assert(output.dst == bufData);
-            static_cast<Consumer *>(this)->consume(output.dst, output.pos);
+            static_cast<Consumer *>(this)->consume(bufData, output.pos);
         } while (input.pos != input.size);
     }
 

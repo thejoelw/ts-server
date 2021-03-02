@@ -9,8 +9,9 @@
 template <typename Consumer>
 class Decompressor : public Consumer {
 public:
-    Decompressor(Consumer consumer)
-        : Consumer(consumer)
+    template <typename... ConsumerArgs>
+    Decompressor(ConsumerArgs... args)
+        : Consumer(std::forward<ConsumerArgs>(args)...)
         , context(ZSTD_createDCtx())
         , bufSize(ZSTD_DStreamOutSize())
         , bufData(new char[bufSize])

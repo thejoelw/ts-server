@@ -8,8 +8,9 @@
 template <typename Consumer>
 class Decoder : public Consumer {
 public:
-    Decoder(Consumer consumer)
-        : Consumer(consumer)
+    template <typename... ConsumerArgs>
+    Decoder(ConsumerArgs... args)
+        : Consumer(std::forward<ConsumerArgs>(args)...)
     {}
 
     void consumeData(const char *data, std::size_t size) {

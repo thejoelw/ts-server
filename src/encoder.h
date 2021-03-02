@@ -8,8 +8,9 @@
 template <typename Consumer>
 class Encoder : public Consumer {
 public:
-    Encoder(Consumer consumer)
-        : Consumer(consumer)
+    template <typename... ConsumerArgs>
+    Encoder(ConsumerArgs... args)
+        : Consumer(std::forward<ConsumerArgs>(args)...)
     {}
 
     void consumeEvent(Event event) {

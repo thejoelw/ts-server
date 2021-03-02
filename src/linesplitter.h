@@ -5,8 +5,9 @@
 template <typename Consumer>
 class LineSplitter : public Consumer {
 public:
-    LineSplitter(Consumer consumer)
-        : Consumer(consumer)
+    template <typename... ConsumerArgs>
+    LineSplitter(ConsumerArgs... args)
+        : Consumer(std::forward<ConsumerArgs>(args)...)
     {}
 
     void consume(const char *data, std::size_t size) {

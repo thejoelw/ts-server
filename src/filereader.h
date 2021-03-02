@@ -7,9 +7,10 @@ class FileReader : public Consumer {
 public:
     class OpenException : public std::exception {};
 
-    FileReader(Consumer consumer)
-        : Consumer(consumer)
-        , bufSize(consumer.getPrefferedSize())
+    template <typename... ConsumerArgs>
+    FileReader(ConsumerArgs... args)
+        : Consumer(std::forward<ConsumerArgs>(args)...)
+        , bufSize(static_cast<Consumer *>(this)->getPrefferedSize())
         , bufData(new char[bufSize])
     {}
 

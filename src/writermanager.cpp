@@ -13,7 +13,7 @@ void WriterManager::open(const std::string &filename) {
 
     queue = new moodycamel::ReaderWriterQueue<QueueMessage>();
     thread = std::thread([](const std::string &filename, moodycamel::ReaderWriterQueue<QueueMessage> *queue) {
-        Encoder<Compressor<FileWriter>> pipe((Compressor<FileWriter>(FileWriter(filename))));
+        Encoder<Compressor<FileWriter>> pipe(std::ref(filename));
 
         while (true) {
             QueueMessage msg;
