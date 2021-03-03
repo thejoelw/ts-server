@@ -13,44 +13,68 @@ public:
     Compressor(ConsumerArgs... args)
         : Consumer(std::forward<ConsumerArgs>(args)...)
         , context(ZSTD_createCCtx())
-        , bufSize(ZSTD_DStreamOutSize())
-        , bufData(new char[bufSize])
+        , outBuf { 0, ZSTD_CStreamOutSize(), ZSTD_CStreamOutSize() }
     {
-        checkZstdRes(ZSTD_CCtx_setParameter(context, ZSTD_c_compressionLevel, 7));
+        checkZstdRes(ZSTD_CCtx_setParameter(context, ZSTD_c_compressionLevel, ZSTD_maxCLevel()));
         checkZstdRes(ZSTD_CCtx_setParameter(context, ZSTD_c_checksumFlag, 1));
     }
 
     ~Compressor() {
-        ZSTD_inBuffer input = { 0, 0, 0 };
+        ZSTD_inBuffer inBuf = { 0, 0, 0 };
         while (true) {
-            ZSTD_outBuffer output = { bufData, bufSize, 0 };
-            size_t const remaining = ZSTD_compressStream2(context, &output , &input, ZSTD_e_end);
-            assert(output.dst == bufData);
-            static_cast<Consumer *>(this)->consume(bufData, output.pos);
+            prepareOutBuf();
+            std::size_t prevPos = outBuf.pos;
+            std::size_t res = ZSTD_compressStream2(context, &outBuf, &inBuf, ZSTD_e_end);
+            checkZstdRes(res);
+            if (outBuf.pos != prevPos) {
+                static_cast<Consumer *>(this)->onData(static_cast<char *>(outBuf.dst) + prevPos, outBuf.pos - prevPos);
+            }
 
-            if (!remaining) {
+            if (!res) {
                 break;
             }
         }
-
-        delete[] bufData;
     }
 
-    void consumeData(const char *data, std::size_t size) {
-        ZSTD_inBuffer input = { data, size, 0 };
+    std::size_t getPrefferedSize() const {
+        return ZSTD_CStreamInSize();
+    }
+
+    void onData(const char *data, std::size_t size) {
+        ZSTD_inBuffer inBuf = { data, size, 0 };
         do {
-            ZSTD_outBuffer output = { bufData, bufSize, 0 };
-            size_t const res = ZSTD_compressStream2(context, &output , &input, ZSTD_e_continue);
+            prepareOutBuf();
+            std::size_t prevPos = outBuf.pos;
+            std::size_t res = ZSTD_compressStream2(context, &outBuf, &inBuf, ZSTD_e_continue);
             checkZstdRes(res);
-            assert(output.dst == bufData);
-            static_cast<Consumer *>(this)->consume(bufData, output.pos);
-        } while (input.pos != input.size);
+            if (outBuf.pos != prevPos) {
+                static_cast<Consumer *>(this)->onData(static_cast<char *>(outBuf.dst) + prevPos, outBuf.pos - prevPos);
+            }
+        } while (inBuf.pos != inBuf.size);
+    }
+
+    template <typename MemType>
+    MemType onBestow(MemType mem) {
+        // Don't need the memory any more (already consumed by zstd), so can immediately give back to producer for re-use.
+        return std::forward<MemType>(mem);
     }
 
 private:
     ZSTD_CCtx* context;
-    std::size_t bufSize;
-    char *bufData;
+    std::unique_ptr<char[]> mem;
+    ZSTD_outBuffer outBuf;
+
+    void prepareOutBuf() {
+        if (outBuf.pos == outBuf.size) {
+            mem = static_cast<Consumer *>(this)->onBestow(std::move(mem));
+            if (!mem) {
+                mem = std::make_unique<char[]>(outBuf.size);
+            }
+            outBuf.dst = mem.get();
+            assert(outBuf.size == ZSTD_CStreamOutSize());
+            outBuf.pos = 0;
+        }
+    }
 
     void checkZstdRes(std::size_t code) {
         if (ZSTD_isError(code)) {

@@ -4,6 +4,7 @@
 
 #include "wsconn.h"
 #include "instant.h"
+#include "event.h"
 #include "baseexception.h"
 
 class Stream;
@@ -26,5 +27,7 @@ public:
 
     void tick();
 
-    void emit(std::string_view msg);
+    void emit(Event event);
+
+    void dispatchClose();
 };

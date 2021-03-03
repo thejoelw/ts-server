@@ -4,12 +4,12 @@
 #include "compressor.h"
 #include "filewriter.h"
 
+WriterManager::~WriterManager() {
+    close();
+}
+
 void WriterManager::open(const std::string &filename) {
-    assert(!!queue == thread.joinable());
-    if (queue) {
-        queue->enqueue(Join());
-        thread.detach();
-    }
+    close();
 
     queue = new moodycamel::ReaderWriterQueue<QueueMessage>();
     thread = std::thread([](const std::string &filename, moodycamel::ReaderWriterQueue<QueueMessage> *queue) {
@@ -19,9 +19,13 @@ void WriterManager::open(const std::string &filename) {
             QueueMessage msg;
             while (queue->try_dequeue(msg)) {
                 if (std::holds_alternative<Event>(msg)) {
-                    pipe.consumeEvent(std::get<Event>(msg));
-                } else if (std::holds_alternative<Bestow>(msg)) {
-                    delete[] std::get<Bestow>(msg).data;
+                    pipe.onEvent(std::get<Event>(msg));
+                } else if (std::holds_alternative<Bestow<std::unique_ptr<char[]>>>(msg)) {
+                    pipe.onBestow(std::move(std::get<Bestow<std::unique_ptr<char[]>>>(msg).mem));
+                } else if (std::holds_alternative<Bestow<std::shared_ptr<char>>>(msg)) {
+                    pipe.onBestow(std::move(std::get<Bestow<std::shared_ptr<char>>>(msg).mem));
+                } else if (std::holds_alternative<Bestow<std::vector<char>>>(msg)) {
+                    pipe.onBestow(std::move(std::get<Bestow<std::vector<char>>>(msg).mem));
                 } else if (std::holds_alternative<Join>(msg)) {
                     delete queue;
                     return;
@@ -35,6 +39,16 @@ void WriterManager::open(const std::string &filename) {
     }, filename, queue);
 }
 
-void WriterManager::write(Event event) {
+void WriterManager::close() {
+    assert(!!queue == thread.joinable());
+    if (queue) {
+        queue->enqueue(Join());
+        queue = 0;
+        thread.join();
+    }
+}
+
+void WriterManager::onEvent(Event event) {
+    assert(queue);
     queue->enqueue(event);
 }

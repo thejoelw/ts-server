@@ -8,9 +8,19 @@
 
 class WriterManager {
 public:
-    void open(const std::string &filename);
+    ~WriterManager();
 
-    void write(Event event);
+    void open(const std::string &filename);
+    void close();
+
+    void onEvent(Event event);
+
+    template <typename MemType>
+    MemType onBestow(MemType mem) {
+        assert(queue);
+        queue->enqueue(Bestow<MemType>(std::forward<MemType>(mem)));
+        return MemType();
+    }
 
 private:
     moodycamel::ReaderWriterQueue<QueueMessage> *queue = 0;

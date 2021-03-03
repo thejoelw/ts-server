@@ -14,7 +14,6 @@ src/event.h
 src/filereader.h
 src/filewriter.h
 src/instant.h
-src/linesplitter.h
 src/main.cpp
 src/publisherconnection.cpp
 src/publisherconnection.h
@@ -22,6 +21,8 @@ src/queuemessage.h
 src/queuepublisher.h
 src/readermanager.cpp
 src/readermanager.h
+src/signalhandler.cpp
+src/signalhandler.h
 src/stream.cpp
 src/stream.h
 src/subscriberconnection.cpp

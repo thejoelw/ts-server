@@ -17,12 +17,15 @@ public:
         queue.enqueue(Join());
     }
 
-    void consumeEvent(Event event) {
+    void onEvent(Event event) {
         queue.enqueue(event);
     }
 
-    void consumeBestow(const char *data) {
-        queue.enqueue(Bestow(data));
+    template <typename MemType>
+    MemType onBestow(MemType mem) {
+        queue.enqueue(Bestow(std::forward<MemType>(mem)));
+        // We moved the memory to the queue, so it's "gone"
+        return MemType();
     }
 
 private:

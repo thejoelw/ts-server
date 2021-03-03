@@ -5,20 +5,26 @@
 #include "stream.h"
 
 std::string Chunk::getFilename() const {
-    return "chunk_" + stream->getKey() + "_" + std::to_string(beginTime.toUint64()) + ".bin";
+    return "tsdata/chunk_" + stream->getKey() + "_" + std::to_string(beginTime.toUint64()) + ".bin";
+}
+
+std::pair<bool, std::uint64_t> Chunk::parseFilename(const std::string &filename, const std::string &key) {
+    std::string begin = "tsdata/chunk_" + key + "_";
+    std::string end = ".bin";
+    if (filename.substr(0, begin.size()) == begin && filename.substr(filename.size() - end.size()) == end) {
+        return std::pair<bool, std::uint64_t>(true, std::stoull(filename.substr(begin.size(), filename.size() - begin.size() - end.size())));
+    } else {
+        return std::pair<bool, std::uint64_t>(false, 0);
+    }
 }
 
 void Chunk::gc() {}
 
-void Chunk::recvEvent(Event event) {
+void Chunk::onEvent(Event event) {
     events.push_back(event);
 }
 
-void Chunk::recvBestow(const char *data) {
-    bestowed.push_back(data);
-}
-
-void Chunk::recvEnd() {
+void Chunk::onEnd() {
     assert(status == Status::Reading);
     status = Status::Done;
 }
@@ -44,20 +50,6 @@ void Chunk::tick(SubscriberConnection &conn) {
 
 void Chunk::emitEvents(SubscriberConnection &conn) {
     while (conn.nextEventId < events.size()) {
-        Event &e = events[conn.nextEventId++];
-        if (e.time >= conn.beginTime) {
-            if (e.time < conn.endTime) {
-                conn.emit(std::string_view(e.data, e.size));
-            } else {
-                throw Stream::UnsubscribeException();
-            }
-        }
+        conn.emit(events[conn.nextEventId++]);
     }
-}
-
-void Chunk::freeMemory() {
-    for (const char *mem : bestowed) {
-        delete[] mem;
-    }
-    bestowed.clear();
 }

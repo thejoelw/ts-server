@@ -11,19 +11,16 @@ public:
         return inst;
     }
 
-    void addConnection(SubscriberConnection *conn) {
-        assert(std::find(connections.cbegin(), connections.cend(), conn) == connections.cend());
-        connections.push_back(conn);
-    }
-    void removeConnection(SubscriberConnection *conn) {
-        std::vector<SubscriberConnection *>::iterator found = std::find(connections.begin(), connections.end(), conn);
-        assert(found != connections.end());
-        *found = connections.back();
-        connections.pop_back();
-    }
+    void addConnection(SubscriberConnection *conn);
+    void removeConnection(SubscriberConnection *conn);
+
+    void dispatchClose(SubscriberConnection *conn);
+
+    void closeAll();
 
     void tick();
 
 private:
     std::vector<SubscriberConnection *> connections;
+    std::vector<SubscriberConnection *> closeQueue;
 };

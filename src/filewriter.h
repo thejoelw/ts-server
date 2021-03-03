@@ -13,8 +13,15 @@ public:
         }
     }
 
-    void consume(const char *data, std::size_t size) {
+    void onData(const char *data, std::size_t size) {
+        assert(size > 0);
         hdl.write(data, size);
+    }
+
+    template <typename MemType>
+    MemType onBestow(MemType mem) {
+        // Don't need the memory any more (already consumed by write), so can immediately give back to producer for re-use.
+        return std::forward<MemType>(mem);
     }
 
     ~FileWriter() {

@@ -13,7 +13,7 @@ public:
         : Consumer(std::forward<ConsumerArgs>(args)...)
     {}
 
-    void consumeEvent(Event event) {
+    void onEvent(Event event) {
         assert((-1) >> 1 == -1);
 
         std::uint64_t time = event.time.toUint64();
@@ -40,11 +40,17 @@ public:
             *metaDst++ = (ds >> (i * 8)) & 0xFF;
         }
 
-        static_cast<Consumer *>(this)->consumeData(metaArr, 1 + timeBytes + sizeBytes);
-        static_cast<Consumer *>(this)->consumeData(event.data, event.size);
+        static_cast<Consumer *>(this)->onData(metaArr, 1 + timeBytes + sizeBytes);
+        static_cast<Consumer *>(this)->onData(event.data, event.size);
 
         timeRegister = time;
         sizeRegister = size;
+    }
+
+    template <typename MemType>
+    MemType onBestow(MemType mem) {
+        // Forward memory to be managed by the consumer, since we've forwarded some char bufs.
+        return static_cast<Consumer *>(this)->onBestow(std::forward<MemType>(mem));
     }
 
 private:

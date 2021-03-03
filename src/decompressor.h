@@ -13,42 +13,51 @@ public:
     Decompressor(ConsumerArgs... args)
         : Consumer(std::forward<ConsumerArgs>(args)...)
         , context(ZSTD_createDCtx())
-        , bufSize(ZSTD_DStreamOutSize())
-        , bufData(new char[bufSize])
-        , bufUsed(0)
+        , outBuf { 0, ZSTD_DStreamOutSize(), ZSTD_DStreamOutSize() }
     {}
-
-    ~Decompressor() {
-        delete[] bufData;
-    }
 
     std::size_t getPrefferedSize() const {
         return ZSTD_DStreamInSize();
     }
 
-    void consume(const char *data, std::size_t size) {
-        ZSTD_inBuffer input = { data, size, 0 };
-        while (input.pos < input.size) {
-            ZSTD_outBuffer output = { bufData, bufSize, bufUsed };
-            size_t const res = ZSTD_decompressStream(context, &output, &input);
+    void onData(const char *data, std::size_t size) {
+        ZSTD_inBuffer inBuf = { data, size, 0 };
+        while (inBuf.pos < inBuf.size) {
+            prepareOutBuf();
+            std::size_t prevPos = outBuf.pos;
+            std::size_t res = ZSTD_decompressStream(context, &outBuf, &inBuf);
             checkZstdRes(res);
-            assert(output.dst == bufData);
-            static_cast<Consumer *>(this)->consumeData(bufData + bufUsed, output.pos - bufUsed);
-            if (output.pos == bufSize) {
-                static_cast<Consumer *>(this)->consumeBestow(bufData);
-                bufData = new char[bufSize];
-                bufUsed = 0;
-            } else {
-                bufUsed = output.pos;
+            if (outBuf.pos != prevPos) {
+                static_cast<Consumer *>(this)->onData(static_cast<char *>(outBuf.dst) + prevPos, outBuf.pos - prevPos);
+            }
+            if (res == 0) {
+                // Frame ended, done
             }
         }
     }
 
+    template <typename MemType>
+    MemType onBestow(MemType mem) {
+        // Don't need the memory any more (already consumed by zstd), so can immediately give back to producer for re-use.
+        return std::forward<MemType>(mem);
+    }
+
 private:
     ZSTD_DCtx* context;
-    std::size_t bufSize;
-    char *bufData;
-    std::size_t bufUsed;
+    std::unique_ptr<char[]> mem;
+    ZSTD_outBuffer outBuf;
+
+    void prepareOutBuf() {
+        if (outBuf.pos == outBuf.size) {
+            mem = static_cast<Consumer *>(this)->onBestow(std::move(mem));
+            if (!mem) {
+                mem = std::make_unique<char[]>(outBuf.size);
+            }
+            outBuf.dst = mem.get();
+            assert(outBuf.size == ZSTD_DStreamOutSize());
+            outBuf.pos = 0;
+        }
+    }
 
     void checkZstdRes(std::size_t code) {
         if (ZSTD_isError(code)) {

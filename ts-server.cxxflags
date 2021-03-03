@@ -1,1 +1,1 @@
--std=c++17 -DTSVIZ_VERSION=unset
+-std=c++17

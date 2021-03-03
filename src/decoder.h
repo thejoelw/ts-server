@@ -13,29 +13,24 @@ public:
         : Consumer(std::forward<ConsumerArgs>(args)...)
     {}
 
-    void consumeData(const char *data, std::size_t size) {
+    void onData(const char *data, std::size_t size) {
         while (size != 0) {
             if (remainingSize != 0) {
                 if (remainingSize <= size) {
                     if (catMsgs.empty()) {
-                        static_cast<Consumer *>(this)->consumeEvent(Event(Instant::fromUint64(timeRegister), data, remainingSize));
+                        static_cast<Consumer *>(this)->onEvent(Event(Instant::fromUint64(timeRegister), data, remainingSize));
                     } else {
-                        char *dst = new char[sizeRegister];
-                        std::size_t index = 0;
-                        for (std::string_view sv : catMsgs) {
-                            std::copy_n(sv.data(), sv.size(), dst + index);
-                            index += sv.size();
-                        }
+                        catMsgs.insert(catMsgs.cend(), data, data + remainingSize);
+                        assert(catMsgs.size() == sizeRegister);
+                        static_cast<Consumer *>(this)->onEvent(Event(Instant::fromUint64(timeRegister), catMsgs.data(), catMsgs.size()));
+                        catMsgs = static_cast<Consumer *>(this)->onBestow(std::move(catMsgs));
                         catMsgs.clear();
-                        assert(index + remainingSize == sizeRegister);
-                        std::copy_n(data, remainingSize, dst + index);
-                        static_cast<Consumer *>(this)->consumeEvent(Event(Instant::fromUint64(timeRegister), dst, sizeRegister));
-                        static_cast<Consumer *>(this)->consumeBestow(dst);
                     }
                     data += remainingSize;
                     size -= remainingSize;
+                    remainingSize = 0;
                 } else {
-                    catMsgs.emplace_back(data, size);
+                    catMsgs.insert(catMsgs.cend(), data, data + size);
                     remainingSize -= size;
                     break;
                 }
@@ -62,15 +57,17 @@ public:
                 metaCtl = *data;
                 timeInc = 0;
                 sizeInc = 0;
-                remainingSize = sizeRegister; // In case metaState == 0
+                remainingSize = metaCtl ? 0 : sizeRegister;
                 data++;
                 size--;
             }
         }
     }
 
-    void consumeBestow(const char *data) {
-        static_cast<Consumer *>(this)->consumeBestow(data);
+    template <typename MemType>
+    MemType onBestow(MemType mem) {
+        // Forward memory to be managed by the consumer, since we've forwarded some char bufs.
+        return static_cast<Consumer *>(this)->onBestow(std::forward<MemType>(mem));
     }
 
 private:
@@ -80,5 +77,5 @@ private:
     std::uint64_t timeInc;
     std::uint64_t sizeInc;
     std::size_t remainingSize = 0;
-    std::vector<std::string_view> catMsgs;
+    std::vector<char> catMsgs;
 };

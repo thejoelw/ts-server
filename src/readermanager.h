@@ -15,12 +15,17 @@ private:
         template <typename Func>
         Reader(Chunk *chunk, Func func)
             : chunk(chunk)
-            , thread(func, this)
-        {}
+        {
+            shouldRun.test_and_set();
+            thread = std::thread(func, this);
+        }
+
+        ~Reader();
 
         Chunk *chunk;
         moodycamel::ReaderWriterQueue<QueueMessage> queue;
         std::thread thread;
+        std::atomic_flag shouldRun = ATOMIC_FLAG_INIT;
     };
 
 public:
@@ -28,6 +33,8 @@ public:
         static ReaderManager inst;
         return inst;
     }
+
+    ~ReaderManager();
 
     void addReader(Chunk *chunk);
 

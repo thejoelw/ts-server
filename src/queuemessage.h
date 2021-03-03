@@ -4,14 +4,24 @@
 
 #include "event.h"
 
+template <typename MemType>
 struct Bestow {
-    Bestow(const char *data)
-        : data(data)
+    Bestow(MemType &&mem)
+        : mem(std::move(mem))
     {}
 
-    const char *data;
+    MemType mem;
 };
 struct Yield {};
 struct Join {};
 
-typedef std::variant<std::monostate, Event, Bestow, Yield, Join> QueueMessage;
+typedef std::variant<
+    std::monostate,
+    Event,
+    Bestow<std::unique_ptr<char[]>>,
+    Bestow<std::shared_ptr<char>>,
+    Bestow<std::vector<char>>,
+    Yield,
+    Join
+> QueueMessage;
+
