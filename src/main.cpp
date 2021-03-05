@@ -51,7 +51,20 @@ int main(int argc, char **argv) {
         }
     }, 1, timerPeriodMs);
 
-    auto onSubUpgrade = [&streams](uWS::HttpResponse<false> *res, uWS::HttpRequest *req, struct us_socket_context_t *socketCtx) {
+    uWS::App::WebSocketBehavior subConfig = {
+        .compression = uWS::DEDICATED_COMPRESSOR_256KB,
+        .maxPayloadLength = 16 * 1024 * 1024,
+        .idleTimeout = 10,
+        .maxBackpressure = 1 * 1024 * 1024
+    };
+    uWS::App::WebSocketBehavior pubConfig = {
+        .compression = uWS::DEDICATED_COMPRESSOR_256KB,
+        .maxPayloadLength = 16 * 1024 * 1024,
+        .idleTimeout = 10,
+        .maxBackpressure = 1 * 1024 * 1024
+    };
+
+    subConfig.upgrade = [&streams](uWS::HttpResponse<false> *res, uWS::HttpRequest *req, struct us_socket_context_t *socketCtx) {
         class BadRequestException : public BaseException {
         public:
             BadRequestException(const std::string &msg)
@@ -154,18 +167,18 @@ int main(int argc, char **argv) {
         }
     };
 
-    auto onSubOpen = [](WsConn *ws) {
+    subConfig.open = [](WsConn *ws) {
         SubscriberConnection *conn = static_cast<SubscriberConnection *>(ws->getUserData());
         conn->wsConn = ws;
         SubConnManager::getInstance().addConnection(conn);
     };
 
-    auto onSubClose = [](WsConn *ws, int /*code*/, std::string_view /*message*/) {
+    subConfig.close = [](WsConn *ws, int /*code*/, std::string_view /*message*/) {
         SubscriberConnection *conn = static_cast<SubscriberConnection *>(ws->getUserData());
         SubConnManager::getInstance().removeConnection(conn);
     };
 
-    auto onPubUpgrade = [&streams](uWS::HttpResponse<false> *res, uWS::HttpRequest *req, struct us_socket_context_t *socketCtx) {
+    pubConfig.upgrade = [&streams](uWS::HttpResponse<false> *res, uWS::HttpRequest *req, struct us_socket_context_t *socketCtx) {
         class BadRequestException : public BaseException {
         public:
             BadRequestException(const std::string &msg)
@@ -198,46 +211,33 @@ int main(int argc, char **argv) {
         }
     };
 
-    auto onPubOpen = [](WsConn *ws) {
+    pubConfig.open = [](WsConn *ws) {
         PublisherConnection *conn = static_cast<PublisherConnection *>(ws->getUserData());
         conn->wsConn = ws;
         PubConnManager::getInstance().addConnection(conn);
     };
 
-    auto onPubMessage = [](WsConn *ws, std::string_view message, uWS::OpCode opCode) {
+    pubConfig.message = [](WsConn *ws, std::string_view message, uWS::OpCode opCode) {
         (void) opCode;
         PublisherConnection *conn = static_cast<PublisherConnection *>(ws->getUserData());
         conn->stream->publish(message.data(), message.size());
     };
 
-    auto onPubClose = [](WsConn *ws, int /*code*/, std::string_view /*message*/) {
+    pubConfig.close = [](WsConn *ws, int /*code*/, std::string_view /*message*/) {
         PublisherConnection *conn = static_cast<PublisherConnection *>(ws->getUserData());
         PubConnManager::getInstance().removeConnection(conn);
     };
 
-    app.ws<SubscriberConnection>("/sub", {
-        .compression = uWS::DEDICATED_COMPRESSOR_256KB,
-        .maxPayloadLength = 16 * 1024 * 1024,
-        .idleTimeout = 10,
-        .maxBackpressure = 1 * 1024 * 1024,
-        .upgrade = onSubUpgrade,
-        .open = onSubOpen,
-        .close = onSubClose
-    }).ws<PublisherConnection>("/pub", {
-        .compression = uWS::DEDICATED_COMPRESSOR_256KB,
-        .maxPayloadLength = 16 * 1024 * 1024,
-        .idleTimeout = 10,
-        .maxBackpressure = 1 * 1024 * 1024,
-        .upgrade = onPubUpgrade,
-        .open = onPubOpen,
-        .message = onPubMessage,
-        .close = onPubClose
-    }).listen(9001, [&appListenSocket](us_listen_socket_t *listenSocket) {
-        appListenSocket = listenSocket;
-        if (listenSocket) {
-            std::cout << "Listening on port " << 9001 << std::endl;
-        }
-    }).run();
+    app
+        .ws<SubscriberConnection>("/sub", std::move(subConfig))
+        .ws<PublisherConnection>("/pub", std::move(pubConfig))
+        .listen(9001, [&appListenSocket](us_listen_socket_t *listenSocket) {
+            appListenSocket = listenSocket;
+            if (listenSocket) {
+                std::cout << "Listening on port " << 9001 << std::endl;
+            }
+        })
+        .run();
 
     for (const std::pair<std::string, Stream *> &stream : streams) {
         delete stream.second;
