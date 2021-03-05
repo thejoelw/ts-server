@@ -30,7 +30,7 @@ void SubscriberConnection::tick() {
 void SubscriberConnection::emit(Event event) {
     if (event.time >= beginTime) {
         if (event.time < endTime) {
-            wsConn->send(std::to_string(event.time.toUint64()) + " " + std::string(event.data, event.size), uWS::OpCode::TEXT, true);
+            wsConn->send(std::string_view(event.data, event.size), uWS::OpCode::TEXT, true);
             if (--head == 0) {
                 endTime = Instant::fromUint64(0);
                 dispatchClose();
