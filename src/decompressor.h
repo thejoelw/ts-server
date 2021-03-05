@@ -6,6 +6,8 @@
 
 #include <zstd.h>
 
+#include "dbparseexception.h"
+
 template <typename Consumer>
 class Decompressor : public Consumer {
 public:
@@ -15,6 +17,14 @@ public:
         , context(ZSTD_createDCtx())
         , outBuf { 0, ZSTD_DStreamOutSize(), ZSTD_DStreamOutSize() }
     {}
+
+    ~Decompressor() {
+        mem = static_cast<Consumer *>(this)->onBestow(std::move(mem));
+
+        if (!frameEnded) {
+            DbParseException::getStore().emplace_back("ZSTD frame is not ended!");
+        }
+    }
 
     std::size_t getPrefferedSize() const {
         return ZSTD_DStreamInSize();
@@ -30,9 +40,7 @@ public:
             if (outBuf.pos != prevPos) {
                 static_cast<Consumer *>(this)->onData(static_cast<char *>(outBuf.dst) + prevPos, outBuf.pos - prevPos);
             }
-            if (res == 0) {
-                // Frame ended, done
-            }
+            frameEnded = res == 0;
         }
     }
 
@@ -46,6 +54,7 @@ private:
     ZSTD_DCtx* context;
     std::unique_ptr<char[]> mem;
     ZSTD_outBuffer outBuf;
+    bool frameEnded = true;
 
     void prepareOutBuf() {
         if (outBuf.pos == outBuf.size) {
@@ -61,7 +70,13 @@ private:
 
     void checkZstdRes(std::size_t code) {
         if (ZSTD_isError(code)) {
-            std::cerr << "ZSTD ERROR: " << ZSTD_getErrorName(code) << std::endl;
+            static thread_local unsigned int remaining = 10;
+            if (remaining) {
+                std::cerr << "Zstd error: " << ZSTD_getErrorName(code) << std::endl;
+                if (--remaining == 0) {
+                    std::cerr << "Zstd errors truncated" << std::endl;
+                }
+            }
         }
     }
 };

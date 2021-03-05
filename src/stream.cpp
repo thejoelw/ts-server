@@ -2,13 +2,14 @@
 
 #include <filesystem>
 
+#include "options.h"
 #include "subscriberconnection.h"
 
 Stream::Stream(const std::string &key)
     : key(key)
 {
     std::vector<std::uint64_t> entries;
-    for (const auto &entry : std::filesystem::directory_iterator("tsdata/")) {
+    for (const auto &entry : std::filesystem::directory_iterator(Options::getOptions().dataPath)) {
         std::pair<bool, std::uint64_t> parsed = Chunk::parseFilename(entry.path().string(), key);
         if (parsed.first) {
             entries.push_back(parsed.second);
@@ -18,12 +19,14 @@ Stream::Stream(const std::string &key)
     std::sort(entries.begin(), entries.end());
 
     for (std::uint64_t beginTime : entries) {
-        chunks.emplace_back(this, Instant::fromUint64(beginTime));
+        chunks.emplace_back(this, Instant::fromUint64(beginTime), true);
     }
 }
 
 std::uint32_t Stream::getInitChunkId(Instant beginTime) {
-    return std::lower_bound(chunks.cbegin(), chunks.cend(), beginTime) - chunks.cbegin();
+    std::deque<Chunk>::const_iterator found = std::upper_bound(chunks.cbegin(), chunks.cend(), beginTime, [](Instant t0, const Chunk &t1) { return t0 < t1.getBeginTime(); });
+    if (found != chunks.cbegin()) { found--; }
+    return found - chunks.cbegin();
 }
 
 void Stream::tick(SubscriberConnection &conn) {
@@ -42,10 +45,10 @@ void Stream::tick(SubscriberConnection &conn) {
 }
 
 struct ChunkedAllocator {
-    static constexpr std::size_t minSize = 1024 * 1024;
+    static constexpr std::size_t minSize = 64 * 1024 * 1024;
 
     std::shared_ptr<char> mem;
-    std::size_t remainingSize;
+    std::size_t remainingSize = 0;
 };
 
 void Stream::publish(const char *data, std::size_t size) {
@@ -53,17 +56,20 @@ void Stream::publish(const char *data, std::size_t size) {
 
     static thread_local ChunkedAllocator allocator;
 
-    bool needsNewChunk = chunks.empty() || chunks.back().getNumEvents() >= 1024 * 1024;
+    bool needsNewChunk = chunks.empty() || chunks.back().getStatus() != Chunk::Status::Live || chunks.back().getNumEvents() >= 1024 * 1024;
     bool needsNewMem = size > allocator.remainingSize;
 
     if (needsNewChunk) {
         if (!chunks.empty()) {
             chunks.back().onBestow(allocator.mem);
             writerManager.onBestow(allocator.mem);
+            if (writerManager.isOpen()) {
+                writerManager.close();
+            }
         }
 
-        chunks.emplace_back(this, now);
-        writerManager.open(chunks.back().getFilename());
+        Chunk &chunk = chunks.emplace_back(this, now, false);
+        writerManager.open(chunk.getFilename());
     }
 
     if (needsNewMem) {

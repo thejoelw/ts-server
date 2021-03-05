@@ -10,24 +10,20 @@ class Stream;
 class SubscriberConnection;
 
 class Chunk {
-private:
-    enum class Status {Lazy, Reading, Done};
-
 public:
-    Chunk(Stream *stream, Instant beginTime)
+    Chunk(Stream *stream, Instant beginTime, bool fromFile)
         : stream(stream)
         , beginTime(beginTime)
+        , status(fromFile ? Status::Closed : Status::Live)
     {}
-
-    bool operator<(const Chunk &other) const {
-        return beginTime < other.beginTime;
-    }
-    bool operator<(Instant otherTime) const {
-        return beginTime < otherTime;
-    }
 
     std::string getFilename() const;
     static std::pair<bool, std::uint64_t> parseFilename(const std::string &filename, const std::string &key);
+
+    Instant getBeginTime() const { return beginTime; }
+
+    enum class Status { Closed, Reading, Done, Live };
+    Status getStatus() const { return status; }
 
     std::size_t getNumEvents() const { return events.size(); }
 
@@ -51,7 +47,7 @@ private:
 
     std::string data;
     std::vector<Event> events;
-    Status status = Status::Lazy;
+    Status status = Status::Closed;
 
     std::tuple<
         std::vector<std::unique_ptr<char[]>>,

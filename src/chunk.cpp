@@ -3,13 +3,14 @@
 #include "subscriberconnection.h"
 #include "readermanager.h"
 #include "stream.h"
+#include "options.h"
 
 std::string Chunk::getFilename() const {
-    return "tsdata/chunk_" + stream->getKey() + "_" + std::to_string(beginTime.toUint64()) + ".bin";
+    return Options::getOptions().dataPath + "/chunk_" + stream->getKey() + "_" + std::to_string(beginTime.toUint64()) + ".bin";
 }
 
 std::pair<bool, std::uint64_t> Chunk::parseFilename(const std::string &filename, const std::string &key) {
-    std::string begin = "tsdata/chunk_" + key + "_";
+    std::string begin = Options::getOptions().dataPath + "/chunk_" + key + "_";
     std::string end = ".bin";
     if (filename.substr(0, begin.size()) == begin && filename.substr(filename.size() - end.size()) == end) {
         return std::pair<bool, std::uint64_t>(true, std::stoull(filename.substr(begin.size(), filename.size() - begin.size() - end.size())));
@@ -31,7 +32,7 @@ void Chunk::onEnd() {
 
 void Chunk::tick(SubscriberConnection &conn) {
     switch (status) {
-    case Status::Lazy:
+    case Status::Closed:
         // Need to initialize the loading
         ReaderManager::getInstance().addReader(this);
         status = Status::Reading;
@@ -42,6 +43,7 @@ void Chunk::tick(SubscriberConnection &conn) {
         break;
 
     case Status::Done:
+    case Status::Live:
         emitEvents(conn);
         conn.nextChunkId++;
         break;

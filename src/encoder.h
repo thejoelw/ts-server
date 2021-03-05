@@ -13,6 +13,10 @@ public:
         : Consumer(std::forward<ConsumerArgs>(args)...)
     {}
 
+    ~Encoder() {
+        onEvent(Event(Instant::fromUint64(0), 0, 0));
+    }
+
     void onEvent(Event event) {
         assert((-1) >> 1 == -1);
 

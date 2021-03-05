@@ -4,17 +4,29 @@
 
 #include <uWebSockets/src/App.h>
 
+#include "options.h"
 #include "stream.h"
 #include "signalhandler.h"
 #include "readermanager.h"
-#include "connectionmanager.h"
+#include "subconnmanager.h"
 #include "subscriberconnection.h"
+#include "pubconnmanager.h"
 #include "publisherconnection.h"
 #include "instant.h"
 #include "wsconn.h"
 #include "baseexception.h"
 
-int main() {
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        std::cerr << "Usage: ./ts-server [data path]" << std::endl;
+        return 1;
+    }
+
+    Options::getMutableOptions().dataPath = argv[1];
+    while (Options::getMutableOptions().dataPath.back() == '/') {
+        Options::getMutableOptions().dataPath.pop_back();
+    }
+
     uWS::App app = uWS::App();
     std::unordered_map<std::string, Stream *> streams;
 
@@ -27,14 +39,15 @@ int main() {
         if (SignalHandler::getInstance().shouldExit()) {
             us_listen_socket_t *&appListenSocket = **static_cast<us_listen_socket_t ***>(us_timer_ext(timer));
             if (appListenSocket) {
-                ConnectionManager::getInstance().closeAll();
+                SubConnManager::getInstance().closeAll();
+                PubConnManager::getInstance().closeAll();
                 us_timer_close(timer);
                 us_listen_socket_close(false, appListenSocket);
                 appListenSocket = 0;
             }
         } else {
             ReaderManager::getInstance().tick();
-            ConnectionManager::getInstance().tick();
+            SubConnManager::getInstance().tick();
         }
     }, 1, timerPeriodMs);
 
@@ -144,12 +157,12 @@ int main() {
     auto onSubOpen = [](WsConn *ws) {
         SubscriberConnection *conn = static_cast<SubscriberConnection *>(ws->getUserData());
         conn->wsConn = ws;
-        ConnectionManager::getInstance().addConnection(conn);
+        SubConnManager::getInstance().addConnection(conn);
     };
 
     auto onSubClose = [](WsConn *ws, int /*code*/, std::string_view /*message*/) {
         SubscriberConnection *conn = static_cast<SubscriberConnection *>(ws->getUserData());
-        ConnectionManager::getInstance().removeConnection(conn);
+        SubConnManager::getInstance().removeConnection(conn);
     };
 
     auto onPubUpgrade = [&streams](uWS::HttpResponse<false> *res, uWS::HttpRequest *req, struct us_socket_context_t *socketCtx) {
@@ -185,10 +198,21 @@ int main() {
         }
     };
 
+    auto onPubOpen = [](WsConn *ws) {
+        PublisherConnection *conn = static_cast<PublisherConnection *>(ws->getUserData());
+        conn->wsConn = ws;
+        PubConnManager::getInstance().addConnection(conn);
+    };
+
     auto onPubMessage = [](WsConn *ws, std::string_view message, uWS::OpCode opCode) {
         (void) opCode;
         PublisherConnection *conn = static_cast<PublisherConnection *>(ws->getUserData());
         conn->stream->publish(message.data(), message.size());
+    };
+
+    auto onPubClose = [](WsConn *ws, int /*code*/, std::string_view /*message*/) {
+        PublisherConnection *conn = static_cast<PublisherConnection *>(ws->getUserData());
+        PubConnManager::getInstance().removeConnection(conn);
     };
 
     app.ws<SubscriberConnection>("/sub", {
@@ -205,13 +229,19 @@ int main() {
         .idleTimeout = 10,
         .maxBackpressure = 1 * 1024 * 1024,
         .upgrade = onPubUpgrade,
+        .open = onPubOpen,
         .message = onPubMessage,
+        .close = onPubClose
     }).listen(9001, [&appListenSocket](us_listen_socket_t *listenSocket) {
         appListenSocket = listenSocket;
         if (listenSocket) {
             std::cout << "Listening on port " << 9001 << std::endl;
         }
     }).run();
+
+    for (const std::pair<std::string, Stream *> &stream : streams) {
+        delete stream.second;
+    }
 
     std::cout << "Ended gracefully!" << std::endl;
 }

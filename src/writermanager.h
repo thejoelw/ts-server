@@ -10,6 +10,11 @@ class WriterManager {
 public:
     ~WriterManager();
 
+    bool isOpen() const {
+        assert(!!queue == thread.joinable());
+        return queue;
+    }
+
     void open(const std::string &filename);
     void close();
 
@@ -17,8 +22,9 @@ public:
 
     template <typename MemType>
     MemType onBestow(MemType mem) {
-        assert(queue);
-        queue->enqueue(Bestow<MemType>(std::forward<MemType>(mem)));
+        if (isOpen()) {
+            queue->enqueue(Bestow<MemType>(std::forward<MemType>(mem)));
+        }
         return MemType();
     }
 

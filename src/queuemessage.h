@@ -24,4 +24,3 @@ typedef std::variant<
     Yield,
     Join
 > QueueMessage;
-

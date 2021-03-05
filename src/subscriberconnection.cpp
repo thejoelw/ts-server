@@ -2,7 +2,7 @@
 
 #include "stream.h"
 #include "wsconn.h"
-#include "connectionmanager.h"
+#include "subconnmanager.h"
 
 SubscriberConnection::SubscriberConnection()
     : beginTime(Instant::now())
@@ -30,7 +30,7 @@ void SubscriberConnection::tick() {
 void SubscriberConnection::emit(Event event) {
     if (event.time >= beginTime) {
         if (event.time < endTime) {
-            wsConn->send(std::string_view(event.data, event.size), uWS::OpCode::TEXT, true);
+            wsConn->send(std::to_string(event.time.toUint64()) + " " + std::string(event.data, event.size), uWS::OpCode::TEXT, true);
             if (--head == 0) {
                 endTime = Instant::fromUint64(0);
                 dispatchClose();
@@ -42,5 +42,5 @@ void SubscriberConnection::emit(Event event) {
 }
 
 void SubscriberConnection::dispatchClose() {
-    ConnectionManager::getInstance().dispatchClose(this);
+    SubConnManager::getInstance().dispatchClose(this);
 }

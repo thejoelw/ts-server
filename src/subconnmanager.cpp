@@ -1,14 +1,14 @@
-#include "connectionmanager.h"
+#include "subconnmanager.h"
 
 #include "subscriberconnection.h"
 #include "stream.h"
 
-void ConnectionManager::addConnection(SubscriberConnection *conn) {
+void SubConnManager::addConnection(SubscriberConnection *conn) {
     assert(std::find(connections.cbegin(), connections.cend(), conn) == connections.cend());
     connections.push_back(conn);
 }
 
-void ConnectionManager::removeConnection(SubscriberConnection *conn) {
+void SubConnManager::removeConnection(SubscriberConnection *conn) {
     conn->stream->unsubConnection(conn);
 
     std::vector<SubscriberConnection *>::iterator found = std::find(connections.begin(), connections.end(), conn);
@@ -17,18 +17,18 @@ void ConnectionManager::removeConnection(SubscriberConnection *conn) {
     connections.pop_back();
 }
 
-void ConnectionManager::dispatchClose(SubscriberConnection *conn) {
+void SubConnManager::dispatchClose(SubscriberConnection *conn) {
     closeQueue.push_back(conn);
 }
 
-void ConnectionManager::closeAll() {
+void SubConnManager::closeAll() {
     // Make a copy because removeConnection() could mutate the connections vector
     for (SubscriberConnection *conn : std::vector<SubscriberConnection *>(connections)) {
         conn->wsConn->end();
     }
 }
 
-void ConnectionManager::tick() {
+void SubConnManager::tick() {
     for (SubscriberConnection *conn : closeQueue) {
         conn->wsConn->end();
     }

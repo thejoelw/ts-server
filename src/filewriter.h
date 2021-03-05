@@ -2,14 +2,30 @@
 
 #include <fstream>
 
+#include "baseexception.h"
+
 class FileWriter {
 public:
-    class OpenException : public std::exception {};
+    class OpenException : public BaseException {
+    public:
+        OpenException(const std::string &path)
+            : BaseException("Could not open file for writing at " + path)
+        {}
+    };
 
     FileWriter(const std::string &path) {
+        static constexpr std::size_t bufSize = 1024 * 1024 * 16;
+//        static constexpr std::size_t bufSize = 0;
+        if (bufSize) {
+            buf = new char[bufSize];
+            hdl.rdbuf()->pubsetbuf(buf, bufSize);
+        } else {
+            hdl.rdbuf()->pubsetbuf(0, 0);
+        }
+
         hdl.open(path, std::ios::out | std::ios::binary | std::ios::trunc);
         if (!hdl.is_open()) {
-            throw OpenException();
+            throw OpenException(path);
         }
     }
 
@@ -26,8 +42,10 @@ public:
 
     ~FileWriter() {
         hdl.close();
+        delete[] buf;
     }
 
 private:
     std::ofstream hdl;
+    char *buf = 0;
 };

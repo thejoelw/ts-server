@@ -4,10 +4,10 @@
 
 class SubscriberConnection;
 
-class ConnectionManager {
+class SubConnManager {
 public:
-    static ConnectionManager &getInstance() {
-        static ConnectionManager inst;
+    static SubConnManager &getInstance() {
+        static SubConnManager inst;
         return inst;
     }
 

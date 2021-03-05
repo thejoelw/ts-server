@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "event.h"
+#include "dbparseexception.h"
 
 template <typename Consumer>
 class Decoder : public Consumer {
@@ -12,6 +13,24 @@ public:
     Decoder(ConsumerArgs... args)
         : Consumer(std::forward<ConsumerArgs>(args)...)
     {}
+
+    ~Decoder() {
+        if (timeRegister != 0) {
+            DbParseException::getStore().emplace_back("Time register is not zero");
+        }
+        if (sizeRegister != 0) {
+            DbParseException::getStore().emplace_back("Size register is not zero");
+        }
+        if (metaCtl != 0) {
+            DbParseException::getStore().emplace_back("Meta ctl is not zero");
+        }
+        if (remainingSize != 0) {
+            DbParseException::getStore().emplace_back("Remaining size is not zero");
+        }
+        if (!catMsgs.empty()) {
+            DbParseException::getStore().emplace_back("Cat msgs is not empty");
+        }
+    }
 
     void onData(const char *data, std::size_t size) {
         while (size != 0) {
@@ -32,6 +51,7 @@ public:
                 } else {
                     catMsgs.insert(catMsgs.cend(), data, data + size);
                     remainingSize -= size;
+                    size = 0;
                     break;
                 }
             } else if (metaCtl != 0) {
@@ -43,13 +63,12 @@ public:
                     metaCtl -= 0x01;
                     sizeInc <<= 8;
                     sizeInc += static_cast<unsigned char>(*data);
-
-                    if (metaCtl == 0) {
-                        // ZigZag decoding
-                        timeRegister += (timeInc >> 1) ^ -(timeInc & 1);
-                        sizeRegister += (sizeInc >> 1) ^ -(sizeInc & 1);
-                        remainingSize = sizeRegister;
-                    }
+                }
+                if (metaCtl == 0) {
+                    // ZigZag decoding
+                    timeRegister += (timeInc >> 1) ^ -(timeInc & 1);
+                    sizeRegister += (sizeInc >> 1) ^ -(sizeInc & 1);
+                    remainingSize = sizeRegister;
                 }
                 data++;
                 size--;

@@ -5,8 +5,7 @@ src/baseexception.h
 src/chunk.cpp
 src/chunk.h
 src/compressor.h
-src/connectionmanager.cpp
-src/connectionmanager.h
+src/dbparseexception.h
 src/decoder.h
 src/decompressor.h
 src/encoder.h
@@ -15,6 +14,9 @@ src/filereader.h
 src/filewriter.h
 src/instant.h
 src/main.cpp
+src/options.h
+src/pubconnmanager.cpp
+src/pubconnmanager.h
 src/publisherconnection.cpp
 src/publisherconnection.h
 src/queuemessage.h
@@ -25,6 +27,8 @@ src/signalhandler.cpp
 src/signalhandler.h
 src/stream.cpp
 src/stream.h
+src/subconnmanager.cpp
+src/subconnmanager.h
 src/subscriberconnection.cpp
 src/subscriberconnection.h
 src/writermanager.cpp

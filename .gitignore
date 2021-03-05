@@ -23,5 +23,4 @@ third_party/THST/
 
 program
 
-fftw_wisdom_float.bin
-fftw_wisdom_double.bin
+tsdata/

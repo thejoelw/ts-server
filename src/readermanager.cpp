@@ -29,6 +29,8 @@ ReaderManager::Reader::~Reader() {
 
 void ReaderManager::tick() {
     for (Reader &reader : readers) {
+        if (reader.chunk == 0) { continue; }
+
         std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 
         QueueMessage msg;
@@ -49,12 +51,7 @@ void ReaderManager::tick() {
                 reader.thread.join();
                 reader.chunk = 0; // Signals that this reader can be deleted
 
-                while (!readers.empty() && readers.front().chunk == 0) {
-                    readers.pop_front();
-                }
-                while (!readers.empty() && readers.back().chunk == 0) {
-                    readers.pop_back();
-                }
+                break;
             } else {
                 assert(false);
             }
@@ -63,5 +60,12 @@ void ReaderManager::tick() {
                 break;
             }
         }
+    }
+
+    while (!readers.empty() && readers.front().chunk == 0) {
+        readers.pop_front();
+    }
+    while (!readers.empty() && readers.back().chunk == 0) {
+        readers.pop_back();
     }
 }
