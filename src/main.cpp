@@ -239,7 +239,7 @@ int main(int argc, char **argv) {
         })
         .run();
 
-    for (const std::pair<std::string, Stream *> &stream : streams) {
+    for (const std::pair<const std::string, Stream *> &stream : streams) {
         delete stream.second;
     }
 

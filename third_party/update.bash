@@ -14,7 +14,7 @@ git checkout 9903a22904fed8176c4a1f69c4b691304b23c78e
 popd
 
 git clone --recursive git@github.com:uNetworking/uWebSockets.git --branch v19.0.0a4
-pushd uWebSockets
+pushd uWebSockets/uSockets
 make -j8
 popd
 
