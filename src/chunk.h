@@ -28,6 +28,8 @@ public:
 
     std::size_t getNumEvents() const { return events.size(); }
 
+    std::size_t getInitEventId(Instant beginTime);
+
     void gc();
 
     void onEvent(Event event);

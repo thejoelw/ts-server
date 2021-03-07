@@ -19,9 +19,15 @@ std::pair<bool, std::uint64_t> Chunk::parseFilename(const std::string &filename,
     }
 }
 
+std::size_t Chunk::getInitEventId(Instant beginTime) {
+    std::vector<Event>::const_iterator found = std::lower_bound(events.cbegin(), events.cend(), beginTime, [](Event t0, Instant t1) { return t0.time < t1; });
+    return found - events.cbegin();
+}
+
 void Chunk::gc() {}
 
 void Chunk::onEvent(Event event) {
+    assert(events.empty() || event.time >= events.back().time);
     events.push_back(event);
 }
 
@@ -46,6 +52,7 @@ void Chunk::tick(SubscriberConnection &conn) {
     case Status::Live:
         emitEvents(conn);
         conn.nextChunkId++;
+        conn.nextEventId = 0;
         break;
     }
 }

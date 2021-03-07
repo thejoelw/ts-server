@@ -23,7 +23,7 @@ Stream::Stream(const std::string &key)
     }
 }
 
-std::uint32_t Stream::getInitChunkId(Instant beginTime) {
+std::size_t Stream::getInitChunkId(Instant beginTime) {
     std::deque<Chunk>::const_iterator found = std::upper_bound(chunks.cbegin(), chunks.cend(), beginTime, [](Instant t0, const Chunk &t1) { return t0 < t1.getBeginTime(); });
     if (found != chunks.cbegin()) { found--; }
     return found - chunks.cbegin();

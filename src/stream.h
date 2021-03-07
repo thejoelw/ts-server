@@ -15,7 +15,13 @@ public:
 
     const std::string &getKey() const { return key; }
 
-    std::uint32_t getInitChunkId(Instant beginTime);
+    std::size_t getInitChunkId(Instant beginTime);
+
+    std::size_t getNumChunks() const { return chunks.size(); }
+    Chunk &getChunk(std::size_t chunkId) {
+        assert(chunkId < chunks.size());
+        return chunks[chunkId];
+    }
 
     void tick(SubscriberConnection &conn);
 

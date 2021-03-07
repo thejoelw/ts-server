@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
         .maxBackpressure = 1 * 1024 * 1024
     };
     uWS::App::WebSocketBehavior pubConfig = {
-        .compression = uWS::DEDICATED_COMPRESSOR_256KB,
+        .compression = uWS::DISABLED,
         .maxPayloadLength = 16 * 1024 * 1024,
         .idleTimeout = 10,
         .maxBackpressure = 1 * 1024 * 1024

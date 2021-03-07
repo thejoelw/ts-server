@@ -17,8 +17,8 @@ public:
     WsConn *wsConn = 0;
 
     Stream *stream = 0;
-    std::uint32_t nextChunkId;
-    std::uint32_t nextEventId;
+    std::size_t nextChunkId;
+    std::size_t nextEventId;
 
     Instant beginTime;
     Instant endTime;
