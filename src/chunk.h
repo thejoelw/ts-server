@@ -41,6 +41,8 @@ public:
         return MemType();
     }
 
+    void close();
+
     void tick(SubscriberConnection &conn);
 
 private:
@@ -48,7 +50,6 @@ private:
 
     Instant beginTime;
 
-    std::string data;
     std::vector<Event> events;
     Status status = Status::Closed;
 

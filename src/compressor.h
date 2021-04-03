@@ -15,7 +15,7 @@ public:
         , context(ZSTD_createCCtx())
         , outBuf { 0, ZSTD_CStreamOutSize(), ZSTD_CStreamOutSize() }
     {
-        checkZstdRes(ZSTD_CCtx_setParameter(context, ZSTD_c_compressionLevel, ZSTD_maxCLevel()));
+        checkZstdRes(ZSTD_CCtx_setParameter(context, ZSTD_c_compressionLevel, 12));
         checkZstdRes(ZSTD_CCtx_setParameter(context, ZSTD_c_checksumFlag, 1));
     }
 

@@ -70,6 +70,10 @@ void Stream::publish(const char *data, std::size_t size) {
             if (writerManager.isOpen()) {
                 writerManager.close();
             }
+
+            if (chunks.back().getStatus() == Chunk::Status::Live) {
+                chunks.back().onEnd();
+            }
         }
 
         Chunk &chunk = chunks.emplace_back(this, now, false);

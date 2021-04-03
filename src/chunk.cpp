@@ -4,6 +4,7 @@
 #include "readermanager.h"
 #include "stream.h"
 #include "options.h"
+#include "garbagecollector.h"
 
 std::string Chunk::getFilename() const {
     return Options::getOptions().dataPath + "/chunk_" + stream->getKey() + "_" + std::to_string(beginTime.toUint64()) + ".bin";
@@ -24,7 +25,16 @@ std::size_t Chunk::getInitEventId(Instant beginTime) {
     return found - events.cbegin();
 }
 
-void Chunk::gc() {}
+void Chunk::gc() {
+    assert(status == Status::Done);
+    events.clear();
+    events.shrink_to_fit();
+    std::apply([](auto &...x) {
+        (..., x.clear());
+        (..., x.shrink_to_fit());
+    }, bestowed);
+    status = Status::Closed;
+}
 
 void Chunk::onEvent(Event event) {
     assert(status == Status::Reading || status == Status::Live);
@@ -33,8 +43,9 @@ void Chunk::onEvent(Event event) {
 }
 
 void Chunk::onEnd() {
-    assert(status == Status::Reading);
+    assert(status == Status::Reading || status == Status::Live);
     status = Status::Done;
+    GarbageCollector::getInstance().submitDone(this);
 }
 
 void Chunk::tick(SubscriberConnection &conn) {

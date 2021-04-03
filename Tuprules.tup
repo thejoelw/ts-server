@@ -24,13 +24,14 @@ ifeq (@(TUP_PLATFORM),macosx)
     CC = clang
     CXX = clang++
 
-    CFLAGS += -mcpu=native -march=native -stdlib=libc++
+    CFLAGS += -stdlib=libc++
     LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd
 else
     CC = gcc
     CXX = g++
 
     CFLAGS += -Wno-psabi
+    # CFLAGS += -mcpu=native -march=native # Causes problems for RPI
     LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd -pthread -lstdc++fs
 endif
 

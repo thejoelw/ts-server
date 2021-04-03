@@ -13,6 +13,8 @@ src/encoder.h
 src/event.h
 src/filereader.h
 src/filewriter.h
+src/garbagecollector.cpp
+src/garbagecollector.h
 src/instant.h
 src/main.cpp
 src/mainloop.h
