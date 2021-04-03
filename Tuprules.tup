@@ -28,14 +28,17 @@ ifeq (@(TUP_PLATFORM),macosx)
     LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd
 else
     CC = gcc
-    # CXX = g++
-    CXX = /home/pi/source/clang+llvm-11.0.1-armv7a-linux-gnueabihf/bin/clang++
+    CXX = g++
+    # CXX = /home/pi/source/clang+llvm-11.0.1-armv7a-linux-gnueabihf/bin/clang++
 
-    CFLAGS += -stdlib=libc++ -mcpu=native -Wno-psabi
+    CFLAGS += -mcpu=native -Wno-psabi
+    # CFLAGS += -stdlib=libc++ -mcpu=native -Wno-psabi
+
     LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd -pthread -lstdc++fs
+    # LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd -pthread -lc++abi -lstdc++fs
 endif
 
 !cpp = |> $(CXX) $(CFLAGS) $(CFLAGS_%f) -c %f -o %o |> %f.o $(ROOT)/<src_objects>
 # !archive = |> ar rs %o |>
-!link = |> $(CXX) $(CFLAGS) $(LDFLAGS) -o %o %<src_objects> |> $(BIN_TARGET)
-!write_linker_cmd = |> echo "$(CXX) $(CFLAGS) $(LDFLAGS) -o $(BIN_TARGET) %<src_objects>" > %o |> link.sh
+!link = |> $(CXX) $(CFLAGS) -o %o %<src_objects> $(LDFLAGS) |> $(BIN_TARGET)
+!write_linker_cmd = |> echo "$(CXX) $(CFLAGS) -o $(BIN_TARGET) %<src_objects> $(LDFLAGS)" > %o |> link.sh
