@@ -1,5 +1,7 @@
 #include "garbagecollector.h"
 
+#include <assert.h>
+
 #include "chunk.h"
 
 void GarbageCollector::submitDone(Chunk *chunk) {
