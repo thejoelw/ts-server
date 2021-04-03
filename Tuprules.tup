@@ -6,6 +6,7 @@ THIRD_PARTY_PATH = $(ROOT)/third_party
 BIN_TARGET = $(ROOT)/ts-server
 
 CFLAGS += -std=c++17
+# CFLAGS += -flto
 CFLAGS += -Wall -Werror -Wno-missing-braces -Wno-unused -Wno-expansion-to-defined -Wno-error=address
 CFLAGS += -I$(SRC_PATH) -I$(THIRD_PARTY_PATH) -I$(THIRD_PARTY_PATH)/spdlog/include -I$(THIRD_PARTY_PATH)/rapidjson/include -I$(THIRD_PARTY_PATH)/websocketpp -I$(THIRD_PARTY_PATH)/uWebSockets/uSockets/src
 
@@ -27,9 +28,10 @@ ifeq (@(TUP_PLATFORM),macosx)
     LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd
 else
     CC = gcc
-    CXX = g++
+    # CXX = g++
+    CXX = /home/pi/source/clang+llvm-11.0.1-armv7a-linux-gnueabihf/bin/clang++
 
-    CFLAGS += -mcpu=native -Wno-psabi
+    CFLAGS += -stdlib=libc++ -mcpu=native -Wno-psabi
     LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd -pthread -lstdc++fs
 endif
 
