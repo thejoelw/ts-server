@@ -2,7 +2,7 @@
 
 #include <chrono>
 
-typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> InstantBase;
+typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds> InstantBase;
 
 class Instant : public InstantBase {
 public:
@@ -15,7 +15,7 @@ public:
     }
 
     static Instant fromUint64(std::uint64_t num) {
-        return InstantBase(InstantBase::duration(num));
+        return InstantBase(Instant::duration(num));
     }
 
     std::uint64_t toUint64() const {

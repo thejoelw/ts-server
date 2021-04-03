@@ -59,6 +59,26 @@ public:
         return std::forward<MemType>(mem);
     }
 
+    template <typename AckType>
+    void onFlush(AckType ack) {
+        ZSTD_inBuffer inBuf = { 0, 0, 0 };
+        while (true) {
+            prepareOutBuf();
+            std::size_t prevPos = outBuf.pos;
+            std::size_t res = ZSTD_compressStream2(context, &outBuf, &inBuf, ZSTD_e_flush);
+            checkZstdRes(res);
+            if (outBuf.pos != prevPos) {
+                static_cast<Consumer *>(this)->onData(static_cast<char *>(outBuf.dst) + prevPos, outBuf.pos - prevPos);
+            }
+
+            if (!res) {
+                break;
+            }
+        }
+
+        static_cast<Consumer *>(this)->onFlush(std::forward<AckType>(ack));
+    }
+
 private:
     ZSTD_CCtx* context;
     std::unique_ptr<char[]> mem;

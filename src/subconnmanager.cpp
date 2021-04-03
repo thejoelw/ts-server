@@ -9,12 +9,13 @@ void SubConnManager::addConnection(SubscriberConnection *conn) {
 }
 
 void SubConnManager::removeConnection(SubscriberConnection *conn) {
-    conn->stream->unsubConnection(conn);
+    conn->stream->removeRealtimeSub(conn);
 
     std::vector<SubscriberConnection *>::iterator found = std::find(connections.begin(), connections.end(), conn);
-    assert(found != connections.end());
-    *found = connections.back();
-    connections.pop_back();
+    if (found != connections.end()) {
+        *found = connections.back();
+        connections.pop_back();
+    }
 }
 
 void SubConnManager::dispatchClose(SubscriberConnection *conn) {

@@ -19,6 +19,7 @@ public:
     void close();
 
     void onEvent(Event event);
+    void onCommit(Commit commit);
 
     template <typename MemType>
     MemType onBestow(MemType mem) {
@@ -29,6 +30,6 @@ public:
     }
 
 private:
-    moodycamel::ReaderWriterQueue<QueueMessage> *queue = 0;
+    moodycamel::BlockingReaderWriterQueue<QueueMessage> *queue = 0;
     std::thread thread;
 };

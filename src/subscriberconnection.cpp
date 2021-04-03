@@ -1,7 +1,6 @@
 #include "subscriberconnection.h"
 
 #include "stream.h"
-#include "wsconn.h"
 #include "subconnmanager.h"
 
 SubscriberConnection::SubscriberConnection()
@@ -22,23 +21,25 @@ SubscriberConnection::SubscriberConnection(Stream *stream, Instant beginTime, In
 {}
 
 void SubscriberConnection::tick() {
-    if (wsConn->getBufferedAmount() < 512 * 1024) {
+    try {
         stream->tick(*this);
-    }
+    } catch (const BackoffException &ex) {}
 }
 
-void SubscriberConnection::emit(Event event) {
+SubWsConn::SendStatus SubscriberConnection::emit(Event event) {
     if (event.time >= beginTime) {
         if (event.time < endTime) {
-            wsConn->send(std::string_view(event.data, event.size), uWS::OpCode::TEXT, true);
+            SubWsConn::SendStatus status = wsConn->send(std::string_view(event.data, event.size), uWS::OpCode::BINARY, true);
             if (--head == 0) {
                 endTime = Instant::fromUint64(0);
                 dispatchClose();
             }
+            return status;
         } else {
             dispatchClose();
         }
     }
+    return SubWsConn::SendStatus::SUCCESS;
 }
 
 void SubscriberConnection::dispatchClose() {

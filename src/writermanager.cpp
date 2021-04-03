@@ -2,8 +2,12 @@
 
 #include "encoder.h"
 #include "compressor.h"
+#include "buffer.h"
 #include "filewriter.h"
+#include "mainloop.h"
 #include "dbparseexception.h"
+
+static constexpr Instant::duration defaultFlushDelay = std::chrono::minutes(5);
 
 WriterManager::~WriterManager() {
     if (isOpen()) {
@@ -14,16 +18,25 @@ WriterManager::~WriterManager() {
 void WriterManager::open(const std::string &filename) {
     assert(!isOpen());
 
-    queue = new moodycamel::ReaderWriterQueue<QueueMessage>();
-    thread = std::thread([](const std::string &filename, moodycamel::ReaderWriterQueue<QueueMessage> *queue) {
+    queue = new moodycamel::BlockingReaderWriterQueue<QueueMessage>();
+    thread = std::thread([](const std::string &filename, moodycamel::BlockingReaderWriterQueue<QueueMessage> *queue) {
         {
-            Encoder<Compressor<FileWriter>> pipe(std::ref(filename));
+//            Encoder<Compressor<FileWriter>> pipe(std::ref(filename));
+            Encoder<Compressor<Buffer<FileWriter>>> pipe(std::ref(filename));
 
+            std::chrono::steady_clock::time_point flushTime = std::chrono::steady_clock::now() + defaultFlushDelay;
+
+            QueueMessage msg;
             while (true) {
-                QueueMessage msg;
-                while (queue->try_dequeue(msg)) {
+                std::chrono::steady_clock::duration wait = flushTime - std::chrono::steady_clock::now();
+                if (wait.count() > 0 && queue->wait_dequeue_timed(msg, wait)) {
                     if (std::holds_alternative<Event>(msg)) {
                         pipe.onEvent(std::get<Event>(msg));
+                    } else if (std::holds_alternative<Commit>(msg)) {
+                        pipe.onFlush([onFlush = std::move(std::get<Commit>(msg).onFlush)]() mutable {
+                            MainLoop::getInstance().loop->defer(std::move(onFlush));
+                        });
+                        flushTime = std::chrono::steady_clock::now() + defaultFlushDelay;
                     } else if (std::holds_alternative<Bestow<std::unique_ptr<char[]>>>(msg)) {
                         pipe.onBestow(std::move(std::get<Bestow<std::unique_ptr<char[]>>>(msg).mem));
                     } else if (std::holds_alternative<Bestow<std::shared_ptr<char>>>(msg)) {
@@ -32,15 +45,15 @@ void WriterManager::open(const std::string &filename) {
                         pipe.onBestow(std::move(std::get<Bestow<std::vector<char>>>(msg).mem));
                     } else if (std::holds_alternative<Join>(msg)) {
                         delete queue;
-                        goto done;
+                        break;
                     } else {
                         assert(false);
                     }
+                } else {
+                    pipe.onFlush([](){});
+                    flushTime = std::chrono::steady_clock::now() + defaultFlushDelay;
                 }
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-            done:;
         }
 
         if (!DbParseException::getStore().empty()) {
@@ -62,5 +75,10 @@ void WriterManager::close() {
 
 void WriterManager::onEvent(Event event) {
     assert(queue);
-    queue->enqueue(event);
+    queue->enqueue(std::move(event));
+}
+
+void WriterManager::onCommit(Commit commit) {
+    assert(queue);
+    queue->enqueue(std::move(commit));
 }

@@ -7,13 +7,13 @@
 #include "options.h"
 #include "stream.h"
 #include "signalhandler.h"
+#include "mainloop.h"
 #include "readermanager.h"
 #include "subconnmanager.h"
 #include "subscriberconnection.h"
 #include "pubconnmanager.h"
 #include "publisherconnection.h"
 #include "instant.h"
-#include "wsconn.h"
 #include "baseexception.h"
 
 int main(int argc, char **argv) {
@@ -30,17 +30,19 @@ int main(int argc, char **argv) {
     uWS::App app = uWS::App();
     std::unordered_map<std::string, Stream *> streams;
 
+    MainLoop::getInstance().loop = uWS::Loop::get();
+
     us_listen_socket_t *appListenSocket = 0;
 
-    static constexpr unsigned int timerPeriodMs = 12;
-    struct us_timer_t *timer = us_create_timer((us_loop_t *) uWS::Loop::get(), 0, sizeof(&appListenSocket));
+    static constexpr unsigned int timerPeriodMs = 16;
+    struct us_timer_t *timer = us_create_timer((us_loop_t *) MainLoop::getInstance().loop, 0, sizeof(&appListenSocket));
     *static_cast<us_listen_socket_t ***>(us_timer_ext(timer)) = &appListenSocket;
     us_timer_set(timer, [](struct us_timer_t *timer) {
         if (SignalHandler::getInstance().shouldExit()) {
             us_listen_socket_t *&appListenSocket = **static_cast<us_listen_socket_t ***>(us_timer_ext(timer));
             if (appListenSocket) {
-                SubConnManager::getInstance().closeAll();
                 PubConnManager::getInstance().closeAll();
+                SubConnManager::getInstance().closeAll();
                 us_timer_close(timer);
                 us_listen_socket_close(false, appListenSocket);
                 appListenSocket = 0;
@@ -51,13 +53,13 @@ int main(int argc, char **argv) {
         }
     }, 1, timerPeriodMs);
 
-    uWS::App::WebSocketBehavior subConfig = {
+    uWS::App::WebSocketBehavior<SubscriberConnection> subConfig = {
         .compression = uWS::DEDICATED_COMPRESSOR_256KB,
         .maxPayloadLength = 16 * 1024 * 1024,
         .idleTimeout = 10,
         .maxBackpressure = 1 * 1024 * 1024
     };
-    uWS::App::WebSocketBehavior pubConfig = {
+    uWS::App::WebSocketBehavior<PublisherConnection> pubConfig = {
         .compression = uWS::DISABLED,
         .maxPayloadLength = 16 * 1024 * 1024,
         .idleTimeout = 10,
@@ -110,20 +112,23 @@ int main(int argc, char **argv) {
                 }
 
                 std::uint64_t mul = 1ull;
-                if (ptr.substr(0, 2) == "ms") {
+                if (ptr.substr(0, 2) == "us") {
                     // Default
                     ptr.remove_prefix(2);
-                } else if (ptr.substr(0, 1) == "s") {
+                } else if (ptr.substr(0, 2) == "ms") {
                     mul = 1000ull;
+                    ptr.remove_prefix(2);
+                } else if (ptr.substr(0, 1) == "s") {
+                    mul = 1000ull * 1000ull;
                     ptr.remove_prefix(1);
                 } else if (ptr.substr(0, 1) == "m") {
-                    mul = 1000ull * 60;
+                    mul = 1000ull * 1000ull * 60;
                     ptr.remove_prefix(1);
                 } else if (ptr.substr(0, 1) == "h") {
-                    mul = 1000ull * 60 * 60;
+                    mul = 1000ull * 1000ull * 60 * 60;
                     ptr.remove_prefix(1);
                 } else if (ptr.substr(0, 1) == "d") {
-                    mul = 1000ull * 60 * 60 * 24;
+                    mul = 1000ull * 1000ull * 60 * 60 * 24;
                     ptr.remove_prefix(1);
                 }
 
@@ -167,13 +172,13 @@ int main(int argc, char **argv) {
         }
     };
 
-    subConfig.open = [](WsConn *ws) {
-        SubscriberConnection *conn = static_cast<SubscriberConnection *>(ws->getUserData());
+    subConfig.open = [](SubWsConn *ws) {
+        SubscriberConnection *conn = ws->getUserData();
         conn->wsConn = ws;
         SubConnManager::getInstance().addConnection(conn);
     };
 
-    subConfig.close = [](WsConn *ws, int /*code*/, std::string_view /*message*/) {
+    subConfig.close = [](SubWsConn *ws, int /*code*/, std::string_view /*message*/) {
         SubscriberConnection *conn = static_cast<SubscriberConnection *>(ws->getUserData());
         SubConnManager::getInstance().removeConnection(conn);
     };
@@ -211,19 +216,40 @@ int main(int argc, char **argv) {
         }
     };
 
-    pubConfig.open = [](WsConn *ws) {
+    pubConfig.open = [](PubWsConn *ws) {
         PublisherConnection *conn = static_cast<PublisherConnection *>(ws->getUserData());
         conn->wsConn = ws;
         PubConnManager::getInstance().addConnection(conn);
     };
 
-    pubConfig.message = [](WsConn *ws, std::string_view message, uWS::OpCode opCode) {
+    pubConfig.message = [](PubWsConn *ws, std::string_view message, uWS::OpCode opCode) {
         (void) opCode;
         PublisherConnection *conn = static_cast<PublisherConnection *>(ws->getUserData());
-        conn->stream->publish(message.data(), message.size());
+
+        switch (opCode) {
+        case uWS::OpCode::BINARY:
+            conn->stream->publish(message.data(), message.size());
+            break;
+
+        case uWS::OpCode::TEXT:
+            if (message.substr(0, 4) == "PUB ") {
+                message.remove_prefix(4);
+                conn->stream->publish(message.data(), message.size());
+            } else if (message.substr(0, 7) == "COMMIT ") {
+                message.remove_prefix(7);
+                conn->stream->commit(Commit([ws, replyKey = std::string(message)]() {
+                    ws->send(replyKey, uWS::OpCode::TEXT, false);
+                }));
+            } else {
+                ws->send("ERROR Invalid command", uWS::OpCode::TEXT, false);
+            }
+            break;
+
+        default:;
+        }
     };
 
-    pubConfig.close = [](WsConn *ws, int /*code*/, std::string_view /*message*/) {
+    pubConfig.close = [](PubWsConn *ws, int /*code*/, std::string_view /*message*/) {
         PublisherConnection *conn = static_cast<PublisherConnection *>(ws->getUserData());
         PubConnManager::getInstance().removeConnection(conn);
     };
@@ -239,7 +265,7 @@ int main(int argc, char **argv) {
         })
         .run();
 
-    for (const std::pair<std::string, Stream *> &stream : streams) {
+    for (const std::pair<const std::string, Stream *> &stream : streams) {
         delete stream.second;
     }
 

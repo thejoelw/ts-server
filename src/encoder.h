@@ -57,6 +57,11 @@ public:
         return static_cast<Consumer *>(this)->onBestow(std::forward<MemType>(mem));
     }
 
+    template <typename AckType>
+    void onFlush(AckType ack) {
+        static_cast<Consumer *>(this)->onFlush(std::forward<AckType>(ack));
+    }
+
 private:
     std::uint64_t timeRegister = 0;
     std::uint64_t sizeRegister = 0;

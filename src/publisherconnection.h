@@ -1,15 +1,19 @@
 #pragma once
 
-#include "wsconn.h"
+#include "uWebSockets/src/WebSocket.h"
+
+class PublisherConnection;
 
 class Stream;
+
+typedef uWS::WebSocket<false, true, PublisherConnection> PubWsConn;
 
 class PublisherConnection {
 public:
     PublisherConnection();
     PublisherConnection(Stream *topic);
 
-    WsConn *wsConn = 0;
+    PubWsConn *wsConn = 0;
 
     Stream *stream = 0;
 };

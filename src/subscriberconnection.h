@@ -2,19 +2,31 @@
 
 #include <string_view>
 
-#include "wsconn.h"
 #include "instant.h"
 #include "event.h"
 #include "baseexception.h"
 
+#include "uWebSockets/src/WebSocket.h"
+
+class SubscriberConnection;
+
 class Stream;
+
+typedef uWS::WebSocket<false, true, SubscriberConnection> SubWsConn;
 
 class SubscriberConnection {
 public:
+    class BackoffException : public BaseException {
+    public:
+        BackoffException()
+            : BaseException("backoff")
+        {}
+    };
+
     SubscriberConnection();
     SubscriberConnection(Stream *topic, Instant beginTime, Instant endTime, std::uint64_t head, std::uint64_t tail);
 
-    WsConn *wsConn = 0;
+    SubWsConn *wsConn = 0;
 
     Stream *stream = 0;
     std::size_t nextChunkId;
@@ -27,7 +39,7 @@ public:
 
     void tick();
 
-    void emit(Event event);
+    SubWsConn::SendStatus emit(Event event);
 
     void dispatchClose();
 };

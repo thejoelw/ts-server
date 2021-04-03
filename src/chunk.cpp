@@ -27,6 +27,7 @@ std::size_t Chunk::getInitEventId(Instant beginTime) {
 void Chunk::gc() {}
 
 void Chunk::onEvent(Event event) {
+    assert(status == Status::Reading || status == Status::Live);
     assert(events.empty() || event.time >= events.back().time);
     events.push_back(event);
 }
@@ -49,16 +50,29 @@ void Chunk::tick(SubscriberConnection &conn) {
         break;
 
     case Status::Done:
-    case Status::Live:
         emitEvents(conn);
         conn.nextChunkId++;
         conn.nextEventId = 0;
+        break;
+
+    case Status::Live:
+        emitEvents(conn);
+        stream->addRealtimeSub(&conn);
         break;
     }
 }
 
 void Chunk::emitEvents(SubscriberConnection &conn) {
     while (conn.nextEventId < events.size()) {
-        conn.emit(events[conn.nextEventId++]);
+        SubWsConn::SendStatus status = conn.emit(events[conn.nextEventId++]);
+        switch (status) {
+            case SubWsConn::SendStatus::BACKPRESSURE:
+                throw SubscriberConnection::BackoffException();
+            case SubWsConn::SendStatus::SUCCESS:
+                break;
+            case SubWsConn::SendStatus::DROPPED:
+                conn.nextEventId--;
+                throw SubscriberConnection::BackoffException();
+        }
     }
 }

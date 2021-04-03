@@ -6,15 +6,11 @@ set -x
 # Change working directory to script location
 pushd `dirname $0` > /dev/null
 
-rm -rf argparse uWebSockets readerwriterqueue
+rm -rf uWebSockets readerwriterqueue
 
-git clone git@github.com:p-ranav/argparse.git
-pushd argparse
-git checkout 9903a22904fed8176c4a1f69c4b691304b23c78e
-popd
-
-git clone --recursive git@github.com:uNetworking/uWebSockets.git --branch v19.0.0a4
+git clone --recursive git@github.com:uNetworking/uWebSockets.git --branch v19.0.0a5
 pushd uWebSockets
+git apply ../uWebSockets.patch
 make -j8
 popd
 

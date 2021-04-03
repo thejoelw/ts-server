@@ -4,6 +4,7 @@
 
 #include "options.h"
 #include "subscriberconnection.h"
+#include "publisherconnection.h"
 
 Stream::Stream(const std::string &key)
     : key(key)
@@ -23,6 +24,10 @@ Stream::Stream(const std::string &key)
     }
 }
 
+Stream::~Stream() {
+    assert(realtimeSubscribers.empty());
+}
+
 std::size_t Stream::getInitChunkId(Instant beginTime) {
     std::deque<Chunk>::const_iterator found = std::upper_bound(chunks.cbegin(), chunks.cend(), beginTime, [](Instant t0, const Chunk &t1) { return t0 < t1.getBeginTime(); });
     if (found != chunks.cbegin()) { found--; }
@@ -37,9 +42,8 @@ void Stream::tick(SubscriberConnection &conn) {
     } else {
         if (Instant::now() >= conn.endTime) {
             conn.dispatchClose();
-        } else if (conn.nextChunkId != static_cast<std::uint32_t>(-1)) {
-            realtimeSubscribers.push_back(&conn);
-            conn.nextChunkId = static_cast<std::uint32_t>(-1);
+        } else if (conn.nextChunkId != static_cast<std::size_t>(-1)) {
+            addRealtimeSub(&conn);
         }
     }
 }
@@ -56,7 +60,7 @@ void Stream::publish(const char *data, std::size_t size) {
 
     static thread_local ChunkedAllocator allocator;
 
-    bool needsNewChunk = chunks.empty() || chunks.back().getStatus() != Chunk::Status::Live || chunks.back().getNumEvents() >= 1024 * 1024;
+    bool needsNewChunk = chunks.empty() || chunks.back().getStatus() != Chunk::Status::Live || chunks.back().getNumEvents() >= 1'000'000;
     bool needsNewMem = size > allocator.remainingSize;
 
     if (needsNewChunk) {
@@ -98,7 +102,21 @@ void Stream::publish(const char *data, std::size_t size) {
     }
 }
 
-void Stream::unsubConnection(SubscriberConnection *conn) {
+void Stream::commit(Commit commit) {
+    if (writerManager.isOpen()) {
+        writerManager.onCommit(std::move(commit));
+    } else {
+        commit.onFlush();
+    }
+}
+
+void Stream::addRealtimeSub(SubscriberConnection *conn) {
+    conn->nextChunkId = static_cast<std::size_t>(-1);
+    conn->nextEventId = 0;
+    realtimeSubscribers.push_back(conn);
+}
+
+void Stream::removeRealtimeSub(SubscriberConnection *conn) {
     std::vector<SubscriberConnection *>::iterator found = std::find(realtimeSubscribers.begin(), realtimeSubscribers.end(), conn);
     if (found != realtimeSubscribers.end()) {
         *found = realtimeSubscribers.back();

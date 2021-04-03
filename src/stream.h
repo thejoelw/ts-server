@@ -12,6 +12,7 @@ class SubscriberConnection;
 class Stream {
 public:
     Stream(const std::string &key);
+    ~Stream();
 
     const std::string &getKey() const { return key; }
 
@@ -26,8 +27,10 @@ public:
     void tick(SubscriberConnection &conn);
 
     void publish(const char *data, std::size_t size);
+    void commit(Commit commit);
 
-    void unsubConnection(SubscriberConnection *conn);
+    void addRealtimeSub(SubscriberConnection *conn);
+    void removeRealtimeSub(SubscriberConnection *conn);
 
 private:
     std::string key;

@@ -2,6 +2,7 @@ Tupfile
 Tuprules.tup
 cleanup_files.sh
 src/baseexception.h
+src/buffer.h
 src/chunk.cpp
 src/chunk.h
 src/compressor.h
@@ -14,6 +15,7 @@ src/filereader.h
 src/filewriter.h
 src/instant.h
 src/main.cpp
+src/mainloop.h
 src/options.h
 src/pubconnmanager.cpp
 src/pubconnmanager.h
@@ -33,4 +35,3 @@ src/subscriberconnection.cpp
 src/subscriberconnection.h
 src/writermanager.cpp
 src/writermanager.h
-src/wsconn.h

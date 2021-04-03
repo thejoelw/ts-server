@@ -14,15 +14,7 @@ public:
     };
 
     FileWriter(const std::string &path) {
-        static constexpr std::size_t bufSize = 1024 * 1024 * 16;
-//        static constexpr std::size_t bufSize = 0;
-        if (bufSize) {
-            buf = new char[bufSize];
-            hdl.rdbuf()->pubsetbuf(buf, bufSize);
-        } else {
-            hdl.rdbuf()->pubsetbuf(0, 0);
-        }
-
+        hdl.rdbuf()->pubsetbuf(0, 0);
         hdl.open(path, std::ios::out | std::ios::binary | std::ios::trunc);
         if (!hdl.is_open()) {
             throw OpenException(path);
@@ -38,6 +30,12 @@ public:
     MemType onBestow(MemType mem) {
         // Don't need the memory any more (already consumed by write), so can immediately give back to producer for re-use.
         return std::forward<MemType>(mem);
+    }
+
+    template <typename AckType>
+    void onFlush(AckType ack) {
+        hdl.flush();
+        ack();
     }
 
     ~FileWriter() {
