@@ -17,25 +17,21 @@ ifeq (@(BUILD_TYPE),debug)
     CFLAGS += -O0 -g -fdebug-prefix-map=`pwd`=`pwd | sed 's/\/\.tup\/.*//'`
 endif
 ifeq (@(BUILD_TYPE),release)
-    CFLAGS += -O3 -march=native -ffast-math -fno-finite-math-only -fvisibility=hidden -DNDEBUG
+    CFLAGS += -O3 -ffast-math -fno-finite-math-only -fvisibility=hidden -DNDEBUG
 endif
 
 ifeq (@(TUP_PLATFORM),macosx)
     CC = clang
     CXX = clang++
 
-    CFLAGS += -stdlib=libc++
+    CFLAGS += -mcpu=native -march=native -stdlib=libc++
     LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd
 else
     CC = gcc
     CXX = g++
-    # CXX = /home/pi/source/clang+llvm-11.0.1-armv7a-linux-gnueabihf/bin/clang++
 
-    CFLAGS += -mcpu=native -Wno-psabi
-    # CFLAGS += -stdlib=libc++ -mcpu=native -Wno-psabi
-
+    CFLAGS += -Wno-psabi
     LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd -pthread -lstdc++fs
-    # LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd -pthread -lc++abi -lstdc++fs
 endif
 
 !cpp = |> $(CXX) $(CFLAGS) $(CFLAGS_%f) -c %f -o %o |> %f.o $(ROOT)/<src_objects>

@@ -11,7 +11,9 @@ rm -rf uWebSockets readerwriterqueue
 git clone --recursive git@github.com:uNetworking/uWebSockets.git --branch v19.0.0a5
 pushd uWebSockets
 git apply ../uWebSockets.patch
+pushd uSockets
 make -j8
+popd
 popd
 
 git clone git@github.com:cameron314/readerwriterqueue.git
