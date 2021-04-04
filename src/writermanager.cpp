@@ -22,7 +22,7 @@ void WriterManager::open(const std::string &filename) {
     thread = std::thread([](const std::string &filename, moodycamel::BlockingReaderWriterQueue<QueueMessage> *queue) {
         {
 //            Encoder<Compressor<FileWriter>> pipe(std::ref(filename));
-            Encoder<Compressor<Buffer<FileWriter>>> pipe(std::ref(filename));
+            Encoder<Buffer<Compressor<Buffer<FileWriter, 64 * 1024 * 1024>>, 64 * 1024 * 1024>> pipe(std::ref(filename));
 
             std::chrono::steady_clock::time_point flushTime = std::chrono::steady_clock::now() + defaultFlushDelay;
 

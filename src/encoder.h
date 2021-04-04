@@ -15,6 +15,7 @@ public:
 
     ~Encoder() {
         onEvent(Event(Instant::fromUint64(0), 0, 0));
+        static_cast<Consumer *>(this)->onBestow(std::move(metaBufMem));
     }
 
     void onEvent(Event event) {
@@ -34,7 +35,14 @@ public:
         unsigned int sizeBytes = ds ? (64 + 7 - __builtin_clzll(ds)) / 8 : 0;
         unsigned char metaCtl = (timeBytes << 4) | sizeBytes;
 
-        char metaArr[17];
+        unsigned int metaSize = 1 + timeBytes + sizeBytes;
+        if (metaBufRemainingSize < metaSize) {
+            bestowMeta();
+            assert(metaBufRemainingSize >= metaSize);
+        }
+        metaBufRemainingSize -= metaSize;
+
+        char *metaArr = metaBufMem.get() + metaBufRemainingSize;
         char *metaDst = metaArr;
         *metaDst++ = metaCtl;
         for (unsigned int i = timeBytes; i-- > 0;) {
@@ -44,7 +52,7 @@ public:
             *metaDst++ = (ds >> (i * 8)) & 0xFF;
         }
 
-        static_cast<Consumer *>(this)->onData(metaArr, 1 + timeBytes + sizeBytes);
+        static_cast<Consumer *>(this)->onData(metaArr, metaSize);
         static_cast<Consumer *>(this)->onData(event.data, event.size);
 
         timeRegister = time;
@@ -65,4 +73,16 @@ public:
 private:
     std::uint64_t timeRegister = 0;
     std::uint64_t sizeRegister = 0;
+
+    static constexpr std::size_t metaBufSize = 1024 * 1024;
+    std::unique_ptr<char[]> metaBufMem;
+    std::size_t metaBufRemainingSize = 0;
+
+    void bestowMeta() {
+        metaBufMem = static_cast<Consumer *>(this)->onBestow(std::move(metaBufMem));
+        if (!metaBufMem) {
+            metaBufMem = std::make_unique<char[]>(metaBufSize);
+        }
+        metaBufRemainingSize = metaBufSize;
+    }
 };

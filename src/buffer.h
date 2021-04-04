@@ -6,9 +6,7 @@
 
 #include "uWebSockets/src/MoveOnlyFunction.h"
 
-static constexpr std::size_t maxSize = 50 * 1024 * 1024;
-
-template <typename Consumer>
+template <typename Consumer, std::size_t maxSize>
 class Buffer : public Consumer {
 public:
     template <typename... ConsumerArgs>
