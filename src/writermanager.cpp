@@ -67,8 +67,6 @@ void WriterManager::open(const std::string &filename) {
                         flushTime = std::chrono::steady_clock::now() + defaultFlushDelay;
                     }
                 }
-
-                std::cout << "Ending thread " << std::this_thread::get_id() << "..." << std::endl;
             }
             std::cout << "Ended thread " << std::this_thread::get_id() << " (processed " << messageCount << " messages and " << eventCount << " events)" << std::endl;
         }

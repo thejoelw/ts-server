@@ -1,6 +1,7 @@
 #include "threadmanager.h"
 
 #include <iostream>
+#include <assert.h>
 
 static constexpr unsigned int maxJoiningThreads = 4;
 
