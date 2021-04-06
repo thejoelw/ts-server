@@ -7,14 +7,14 @@
 #include "uWebSockets/src/MoveOnlyFunction.h"
 
 template <typename Consumer, std::size_t maxSize>
-class Merger : public Consumer {
+class Chunker : public Consumer {
 public:
     template <typename... ConsumerArgs>
-    Merger(ConsumerArgs... args)
+    Chunker(ConsumerArgs... args)
         : Consumer(std::forward<ConsumerArgs>(args)...)
     {}
 
-    ~Merger() {
+    ~Chunker() {
         flushData();
     }
 

@@ -3,7 +3,7 @@
 #include "encoder.h"
 #include "compressor.h"
 #include "buffer.h"
-#include "merger.h"
+#include "chunker.h"
 #include "filewriter.h"
 #include "mainloop.h"
 #include "dbparseexception.h"
@@ -31,7 +31,7 @@ void WriterManager::open(const std::string &filename) {
 
             {
 //                Encoder<Compressor<FileWriter>> pipe(std::ref(filename));
-                Encoder<Buffer<Compressor<FileWriter>, 64 * 1024 * 1024>> pipe(std::ref(filename));
+                Encoder<Buffer<Compressor<Chunker<FileWriter, 64 * 1024 * 1024>>, 64 * 1024 * 1024>> pipe(std::ref(filename));
 
                 std::chrono::steady_clock::time_point flushTime = std::chrono::steady_clock::now() + defaultFlushDelay;
 

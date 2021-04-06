@@ -5,6 +5,7 @@ src/baseexception.h
 src/buffer.h
 src/chunk.cpp
 src/chunk.h
+src/chunker.h
 src/compressor.h
 src/dbparseexception.h
 src/decoder.h
@@ -18,7 +19,6 @@ src/garbagecollector.h
 src/instant.h
 src/main.cpp
 src/mainloop.h
-src/merger.h
 src/options.h
 src/pubconnmanager.cpp
 src/pubconnmanager.h
