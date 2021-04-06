@@ -1,6 +1,7 @@
 #include "threadmanager.h"
 
 #include <iostream>
+#include <sstream>
 #include <assert.h>
 
 static constexpr unsigned int maxJoiningThreads = 4;
@@ -21,10 +22,12 @@ void ThreadManager::enqueueJoin(std::thread &&thread) {
 
 void ThreadManager::joinAll() {
     for (std::thread &thread : threads) {
-        std::thread::id id = thread.get_id();
-        std::cout << "Joining thread " << id << "..." << std::endl;
+        std::stringstream ss;
+        ss << thread.get_id();
+
+        std::cout << "Joining thread " << ss.str() << "..." << std::endl;
         thread.join();
-        std::cout << "Joined thread " << id << std::endl;
+        std::cout << "Joined thread " << ss.str() << std::endl;
     }
     threads.clear();
 }
