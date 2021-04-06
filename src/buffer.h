@@ -6,62 +6,48 @@
 
 #include "uWebSockets/src/MoveOnlyFunction.h"
 
-template <typename Consumer, std::size_t maxSize>
+template <typename Consumer, std::size_t bufSize>
 class Buffer : public Consumer {
 public:
     template <typename... ConsumerArgs>
     Buffer(ConsumerArgs... args)
         : Consumer(std::forward<ConsumerArgs>(args)...)
+        , bufMem(std::make_unique<char[]>(bufSize))
     {}
 
     ~Buffer() {
-        flushData();
+        flush();
     }
 
     void onData(const char *data, std::size_t size) {
-        if (!datas.empty() && data == &datas.back().back()) {
-            datas.back() = std::string_view(datas.back().data(), datas.back().size() + size);
-        } else {
-            datas.emplace_back(data, size);
+        if (bufIdx + size > bufSize) {
+            flush();
         }
-
-        curSize += size;
-        if (curSize > maxSize) {
-            flushData();
-        }
+        std::copy_n(data, size, bufMem.get() + bufIdx);
+        bufIdx += size;
     }
 
     template <typename MemType>
     MemType onBestow(MemType mem) {
-        bestows.emplace_back([mem = std::forward<MemType>(mem)](Consumer *consumer) mutable {
-            consumer->onBestow(std::forward<MemType>(mem));
-        });
-        return MemType();
+        return std::forward<MemType>(mem);
     }
 
     template <typename AckType>
     void onFlush(AckType ack) {
-        flushData();
+        flush();
         static_cast<Consumer *>(this)->onFlush(std::forward<AckType>(ack));
     }
 
 private:
-    std::vector<std::string_view> datas;
-    std::vector<uWS::MoveOnlyFunction<void(Consumer *consumer)>> bestows;
+    std::unique_ptr<char[]> bufMem;
+    std::size_t bufIdx = 0;
 
-    std::size_t curSize = 0;
-
-    void flushData() {
-        for (std::string_view data : datas) {
-            static_cast<Consumer *>(this)->onData(data.data(), data.size());
+    void flush() {
+        static_cast<Consumer *>(this)->onData(bufMem.get(), bufIdx);
+        bufMem = static_cast<Consumer *>(this)->onBestow(std::move(bufMem));
+        if (!bufMem) {
+            bufMem = std::make_unique<char[]>(bufSize);
         }
-        datas.clear();
-
-        for (uWS::MoveOnlyFunction<void(Consumer *consumer)> &bestow : bestows) {
-            bestow(this);
-        }
-        bestows.clear();
-
-        curSize = 0;
+        bufIdx = 0;
     }
 };

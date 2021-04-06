@@ -2,8 +2,6 @@
 
 #include <deque>
 
-static constexpr unsigned int maxDoneChunks = 4;
-
 class Chunk;
 
 class GarbageCollector {

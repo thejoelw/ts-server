@@ -4,6 +4,8 @@
 
 #include "chunk.h"
 
+static constexpr unsigned int maxDoneChunks = 4;
+
 void GarbageCollector::submitDone(Chunk *chunk) {
     assert(chunk->getStatus() == Chunk::Status::Done);
     chunks.push_back(chunk);

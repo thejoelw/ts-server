@@ -18,6 +18,7 @@ src/garbagecollector.h
 src/instant.h
 src/main.cpp
 src/mainloop.h
+src/merger.h
 src/options.h
 src/pubconnmanager.cpp
 src/pubconnmanager.h
@@ -35,5 +36,7 @@ src/subconnmanager.cpp
 src/subconnmanager.h
 src/subscriberconnection.cpp
 src/subscriberconnection.h
+src/threadmanager.cpp
+src/threadmanager.h
 src/writermanager.cpp
 src/writermanager.h

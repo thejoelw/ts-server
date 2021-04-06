@@ -15,6 +15,7 @@
 #include "publisherconnection.h"
 #include "instant.h"
 #include "baseexception.h"
+#include "threadmanager.h"
 
 int main(int argc, char **argv) {
     if (argc != 2) {
@@ -268,6 +269,9 @@ int main(int argc, char **argv) {
     for (const std::pair<const std::string, Stream *> &stream : streams) {
         delete stream.second;
     }
+
+    std::cout << "Waiting for threads to finish..." << std::endl;
+    ThreadManager::getInstance().joinAll();
 
     std::cout << "Ended gracefully!" << std::endl;
 }
