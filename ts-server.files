@@ -19,6 +19,8 @@ src/garbagecollector.h
 src/instant.h
 src/main.cpp
 src/mainloop.h
+src/memory.cpp
+src/memory.h
 src/options.h
 src/pubconnmanager.cpp
 src/pubconnmanager.h

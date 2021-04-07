@@ -27,12 +27,9 @@ std::size_t Chunk::getInitEventId(Instant beginTime) {
 
 void Chunk::gc() {
     assert(status == Status::Done);
-    events.clear();
-    events.shrink_to_fit();
-    std::apply([](auto &...x) {
-        (..., x.clear());
-        (..., x.shrink_to_fit());
-    }, bestowed);
+    *this = Chunk(stream, beginTime, true);
+    assert(events.size() == 0);
+    assert(events.capacity() == 0);
     status = Status::Closed;
 }
 

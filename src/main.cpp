@@ -16,6 +16,7 @@
 #include "instant.h"
 #include "baseexception.h"
 #include "threadmanager.h"
+#include "memory.h"
 
 int main(int argc, char **argv) {
     if (argc != 2) {
@@ -51,8 +52,14 @@ int main(int argc, char **argv) {
         } else {
             ReaderManager::getInstance().tick();
             SubConnManager::getInstance().tick();
+
+            static unsigned int x = 0;
+            x++;
+            if (x % (1024 / timerPeriodMs) == 0) {
+                printSizeDist();
+            }
         }
-    }, 1, timerPeriodMs);
+    }, timerPeriodMs, timerPeriodMs);
 
     uWS::App::WebSocketBehavior<SubscriberConnection> subConfig = {
         .compression = uWS::DEDICATED_COMPRESSOR_256KB,
