@@ -15,16 +15,7 @@ void ReaderManager::addReader(Chunk *chunk) {
 }
 
 ReaderManager::~ReaderManager() {
-    for (Reader &reader : readers) {
-        reader.shouldRun.clear();
-    }
-}
-
-ReaderManager::Reader::~Reader() {
-    if (chunk) {
-        assert(thread.joinable());
-        thread.join();
-    }
+    assert(readers.empty());
 }
 
 void ReaderManager::tick() {
@@ -52,11 +43,13 @@ void ReaderManager::tick() {
                 reader.chunk = 0; // Signals that this reader can be deleted
 
                 break;
+            } else if (std::holds_alternative<Error>(msg)) {
+                std::cerr << "Error reading " << reader.chunk->getFilename() << ": " << std::get<Error>(msg).msg << std::endl;
             } else {
                 assert(false);
             }
 
-            if (std::chrono::steady_clock::now() - start > std::chrono::milliseconds(1)) {
+            if (std::chrono::steady_clock::now() - start > std::chrono::milliseconds(10)) {
                 break;
             }
         }
@@ -68,4 +61,18 @@ void ReaderManager::tick() {
     while (!readers.empty() && readers.back().chunk == 0) {
         readers.pop_back();
     }
+}
+
+void ReaderManager::joinAll() {
+    for (Reader &reader : readers) {
+        reader.shouldRun.clear();
+    }
+
+    for (Reader &reader : readers) {
+        if (reader.chunk) {
+            reader.thread.join();
+        }
+    }
+
+    readers.clear();
 }

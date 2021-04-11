@@ -30,7 +30,7 @@ void Chunk::gc() {
     *this = Chunk(stream, beginTime, true);
     assert(events.size() == 0);
     assert(events.capacity() == 0);
-    status = Status::Closed;
+    assert(status == Status::Closed);
 }
 
 void Chunk::onEvent(Event event) {

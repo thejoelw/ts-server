@@ -6,7 +6,6 @@
 #include "chunker.h"
 #include "filewriter.h"
 #include "mainloop.h"
-#include "dbparseexception.h"
 #include "threadmanager.h"
 
 static constexpr Instant::duration defaultFlushDelay = std::chrono::minutes(5);
@@ -24,13 +23,12 @@ void WriterManager::open(const std::string &filename) {
     queue = new moodycamel::BlockingReaderWriterQueue<QueueMessage>();
     thread = std::thread([](const std::string &filename, moodycamel::BlockingReaderWriterQueue<QueueMessage> *queue) {
         {
-            std::cout << "Starting new thread " << std::this_thread::get_id() << "..." << std::endl;
+            std::cout << "Starting new thread " << std::this_thread::get_id() << " writing to " << filename << "..." << std::endl;
 
             std::uint64_t messageCount = 0;
             std::uint64_t eventCount = 0;
 
             {
-//                Encoder<Compressor<FileWriter>> pipe(std::ref(filename));
                 Encoder<Buffer<Compressor<Chunker<FileWriter, 64 * 1024 * 1024>>, 64 * 1024 * 1024>> pipe(std::ref(filename));
 
                 std::chrono::steady_clock::time_point flushTime = std::chrono::steady_clock::now() + defaultFlushDelay;
@@ -69,13 +67,6 @@ void WriterManager::open(const std::string &filename) {
                 }
             }
             std::cout << "Ended thread " << std::this_thread::get_id() << " (processed " << messageCount << " messages and " << eventCount << " events)" << std::endl;
-        }
-
-        if (!DbParseException::getStore().empty()) {
-            std::cerr << "Have parse exceptions from file " << filename << std::endl;
-            for (const DbParseException &ex : DbParseException::getStore()) {
-                std::cerr << "  " << ex.what() << std::endl;
-            }
         }
     }, filename, queue);
 }

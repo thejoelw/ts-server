@@ -2,8 +2,8 @@
 
 #include <string_view>
 
-#include "instant.h"
 #include "event.h"
+#include "subspec.h"
 #include "baseexception.h"
 
 #include "uWebSockets/src/WebSocket.h"
@@ -24,18 +24,15 @@ public:
     };
 
     SubscriberConnection();
-    SubscriberConnection(Stream *topic, Instant beginTime, Instant endTime, std::uint64_t head, std::uint64_t tail);
+    SubscriberConnection(Stream *topic, SubSpec spec);
 
     SubWsConn *wsConn = 0;
 
     Stream *stream = 0;
+    SubSpec spec;
+
     std::size_t nextChunkId;
     std::size_t nextEventId;
-
-    Instant beginTime;
-    Instant endTime;
-    std::uint64_t head;
-    std::uint64_t tail;
 
     void tick();
 

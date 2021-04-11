@@ -34,6 +34,8 @@ public:
                 break;
             }
         }
+
+        ZSTD_freeCCtx(context);
     }
 
     std::size_t getPrefferedSize() const {

@@ -53,11 +53,13 @@ int main(int argc, char **argv) {
             ReaderManager::getInstance().tick();
             SubConnManager::getInstance().tick();
 
+#if DEBUG_ALLOCATIONS
             static unsigned int x = 0;
             x++;
             if (x % (1024 / timerPeriodMs) == 0) {
                 printSizeDist();
             }
+#endif
         }
     }, timerPeriodMs, timerPeriodMs);
 
@@ -169,7 +171,7 @@ int main(int argc, char **argv) {
             }
 
             res->template upgrade<SubscriberConnection>(
-                SubscriberConnection(stream, beginTime, endTime, head, tail),
+                SubscriberConnection(stream, SubSpec{ .beginTime = beginTime, .endTime = endTime, .head = head, .tail = tail}),
                 req->getHeader("sec-websocket-key"),
                 req->getHeader("sec-websocket-protocol"),
                 req->getHeader("sec-websocket-extensions"),
@@ -277,7 +279,10 @@ int main(int argc, char **argv) {
         delete stream.second;
     }
 
-    std::cout << "Waiting for threads to finish..." << std::endl;
+    std::cout << "Waiting for reading threads to finish..." << std::endl;
+    ReaderManager::getInstance().joinAll();
+
+    std::cout << "Waiting for writing threads to finish..." << std::endl;
     ThreadManager::getInstance().joinAll();
 
     std::cout << "Ended gracefully!" << std::endl;

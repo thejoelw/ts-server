@@ -13,21 +13,21 @@ ThreadManager::~ThreadManager() {
 void ThreadManager::enqueueJoin(std::thread &&thread) {
     threads.emplace_back(std::move(thread));
     if (threads.size() > maxJoiningThreads) {
-        std::cout << "Joining thread " << threads.front().get_id() << "..." << std::endl;
-        threads.front().join();
+        join(threads.front());
         threads.pop_front();
-        std::cout << "Joined thread " << threads.front().get_id() << std::endl;
     }
 }
 
 void ThreadManager::joinAll() {
     for (std::thread &thread : threads) {
-        std::stringstream ss;
-        ss << thread.get_id();
-
-        std::cout << "Joining thread " << ss.str() << "..." << std::endl;
-        thread.join();
-        std::cout << "Joined thread " << ss.str() << std::endl;
+        join(thread);
     }
     threads.clear();
+}
+
+void ThreadManager::join(std::thread &thread) {
+    std::thread::id id = thread.get_id();
+    std::cout << "Joining thread " << id << "..." << std::endl;
+    thread.join();
+    std::cout << "Joined thread " << id << std::endl;
 }

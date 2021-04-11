@@ -3,6 +3,7 @@
 #include <variant>
 #include <memory>
 #include <vector>
+#include <string>
 
 #include "uWebSockets/src/MoveOnlyFunction.h"
 
@@ -27,6 +28,14 @@ struct Bestow {
 struct Yield {};
 struct Join {};
 
+struct Error {
+    Error(std::string_view msg)
+        : msg(msg)
+    {}
+
+    std::string msg;
+};
+
 typedef std::variant<
     std::monostate,
     Event,
@@ -35,5 +44,6 @@ typedef std::variant<
     Bestow<std::shared_ptr<char>>,
     Bestow<std::vector<char>>,
     Yield,
-    Join
+    Join,
+    Error
 > QueueMessage;

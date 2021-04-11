@@ -1,5 +1,7 @@
 #include "memory.h"
 
+#if DEBUG_ALLOCATIONS
+
 #include <new>
 #include <map>
 #include <iostream>
@@ -60,3 +62,5 @@ void printSizeDist() {
     }
     std::cout << std::endl << std::endl;
 }
+
+#endif

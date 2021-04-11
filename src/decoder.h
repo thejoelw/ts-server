@@ -4,7 +4,6 @@
 #include <string_view>
 
 #include "event.h"
-#include "dbparseexception.h"
 
 template <typename Consumer>
 class Decoder : public Consumer {
@@ -16,19 +15,19 @@ public:
 
     ~Decoder() {
         if (timeRegister != 0) {
-            DbParseException::getStore().emplace_back("Time register is not zero");
+            static_cast<Consumer *>(this)->onError("Time register is not zero");
         }
         if (sizeRegister != 0) {
-            DbParseException::getStore().emplace_back("Size register is not zero");
+            static_cast<Consumer *>(this)->onError("Size register is not zero");
         }
         if (metaCtl != 0) {
-            DbParseException::getStore().emplace_back("Meta ctl is not zero");
+            static_cast<Consumer *>(this)->onError("Meta ctl is not zero");
         }
         if (remainingSize != 0) {
-            DbParseException::getStore().emplace_back("Remaining size is not zero");
+            static_cast<Consumer *>(this)->onError("Remaining size is not zero");
         }
         if (!catMsgs.empty()) {
-            DbParseException::getStore().emplace_back("Cat msgs is not empty");
+            static_cast<Consumer *>(this)->onError("Cat msgs is not empty");
         }
     }
 

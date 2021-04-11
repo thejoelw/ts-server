@@ -20,8 +20,6 @@ private:
             thread = std::thread(func, this);
         }
 
-        ~Reader();
-
         Chunk *chunk;
         moodycamel::ReaderWriterQueue<QueueMessage> queue;
         std::thread thread;
@@ -39,6 +37,8 @@ public:
     void addReader(Chunk *chunk);
 
     void tick();
+
+    void joinAll();
 
 private:
     std::deque<Reader> readers;

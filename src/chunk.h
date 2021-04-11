@@ -26,7 +26,7 @@ public:
     enum class Status { Closed, Reading, Done, Live };
     Status getStatus() const { return status; }
 
-    std::size_t getNumEvents() const { return events.size(); }
+    std::size_t getNumEvents() const { return status == Status::Live ? events.size() : 1'000'000; }
 
     std::size_t getInitEventId(Instant beginTime);
 

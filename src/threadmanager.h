@@ -17,4 +17,6 @@ public:
 
 private:
     std::deque<std::thread> threads;
+
+    static void join(std::thread &thread);
 };

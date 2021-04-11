@@ -4,34 +4,32 @@
 #include "subconnmanager.h"
 
 SubscriberConnection::SubscriberConnection()
-    : beginTime(Instant::now())
-    , endTime(Instant::now())
-    , head(0)
-    , tail(0)
+    : spec(SubSpec{ .beginTime = Instant::now(), .endTime = Instant::now(), .head = 0, .tail = 0 })
+    , nextChunkId(static_cast<std::size_t>(-1))
+    , nextEventId(static_cast<std::size_t>(-1))
 {}
 
-SubscriberConnection::SubscriberConnection(Stream *stream, Instant beginTime, Instant endTime, std::uint64_t head, std::uint64_t tail)
+SubscriberConnection::SubscriberConnection(Stream *stream, SubSpec spec)
     : stream(stream)
-    , nextChunkId(stream->getInitChunkId(beginTime))
-    , nextEventId(nextChunkId < stream->getNumChunks() ? stream->getChunk(nextChunkId).getInitEventId(beginTime) : 0)
-    , beginTime(beginTime)
-    , endTime(endTime)
-    , head(head)
-    , tail(tail)
+    , spec(spec)
+    , nextChunkId(stream->getInitChunkId(spec.beginTime))
+    , nextEventId(nextChunkId < stream->getNumChunks() ? stream->getChunk(nextChunkId).getInitEventId(spec.beginTime) : 0)
 {}
 
 void SubscriberConnection::tick() {
-    try {
-        stream->tick(*this);
-    } catch (const BackoffException &ex) {}
+    wsConn->cork([this]() {
+        try {
+            stream->tick(*this);
+        } catch (const BackoffException &ex) {}
+    });
 }
 
 SubWsConn::SendStatus SubscriberConnection::emit(Event event) {
-    if (event.time >= beginTime) {
-        if (event.time < endTime) {
+    if (event.time >= spec.beginTime) {
+        if (event.time < spec.endTime) {
             SubWsConn::SendStatus status = wsConn->send(std::string_view(event.data, event.size), uWS::OpCode::BINARY, true);
-            if (--head == 0) {
-                endTime = Instant::fromUint64(0);
+            if (--spec.head == 0) {
+                spec.endTime = Instant::fromUint64(0);
                 dispatchClose();
             }
             return status;

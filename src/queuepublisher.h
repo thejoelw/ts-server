@@ -11,7 +11,7 @@ public:
     {}
 
     ~QueuePublisher() {
-        for (unsigned int i = 0; i < 256; i++) {
+        for (unsigned int i = 0; i < 16; i++) {
             queue.enqueue(Yield());
         }
         queue.enqueue(Join());
@@ -26,6 +26,10 @@ public:
         queue.enqueue(Bestow(std::forward<MemType>(mem)));
         // We moved the memory to the queue, so it's "gone"
         return MemType();
+    }
+
+    void onError(std::string_view msg) {
+        queue.enqueue(Error(msg));
     }
 
 private:

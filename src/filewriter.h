@@ -40,10 +40,8 @@ public:
 
     ~FileWriter() {
         hdl.close();
-        delete[] buf;
     }
 
 private:
     std::ofstream hdl;
-    char *buf = 0;
 };

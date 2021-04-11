@@ -6,8 +6,6 @@
 
 #include <zstd.h>
 
-#include "dbparseexception.h"
-
 template <typename Consumer>
 class Decompressor : public Consumer {
 public:
@@ -22,8 +20,10 @@ public:
         mem = static_cast<Consumer *>(this)->onBestow(std::move(mem));
 
         if (!frameEnded) {
-            DbParseException::getStore().emplace_back("ZSTD frame is not ended!");
+            static_cast<Consumer *>(this)->onError("ZSTD frame is not ended!");
         }
+
+        ZSTD_freeDCtx(context);
     }
 
     std::size_t getPrefferedSize() const {
@@ -72,9 +72,9 @@ private:
         if (ZSTD_isError(code)) {
             static thread_local unsigned int remaining = 10;
             if (remaining) {
-                std::cerr << "Zstd error: " << ZSTD_getErrorName(code) << std::endl;
+                static_cast<Consumer *>(this)->onError(std::string("Zstd error: ") + ZSTD_getErrorName(code));
                 if (--remaining == 0) {
-                    std::cerr << "Zstd errors truncated" << std::endl;
+                    static_cast<Consumer *>(this)->onError("Zstd errors truncated");
                 }
             }
         }

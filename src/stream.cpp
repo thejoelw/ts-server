@@ -40,7 +40,7 @@ void Stream::tick(SubscriberConnection &conn) {
     if (conn.nextChunkId < chunks.size()) {
         chunks[conn.nextChunkId].tick(conn);
     } else {
-        if (Instant::now() >= conn.endTime) {
+        if (Instant::now() >= conn.spec.endTime) {
             conn.dispatchClose();
         } else if (conn.nextChunkId != static_cast<std::size_t>(-1)) {
             addRealtimeSub(&conn);
