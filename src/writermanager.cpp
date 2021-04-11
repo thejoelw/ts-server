@@ -8,7 +8,7 @@
 #include "mainloop.h"
 #include "threadmanager.h"
 
-static constexpr Instant::duration defaultFlushDelay = std::chrono::minutes(5);
+static constexpr Instant::duration defaultFlushDelay = std::chrono::minutes(7);
 //static constexpr Instant::duration defaultFlushDelay = std::chrono::seconds(10);
 
 WriterManager::~WriterManager() {

@@ -4,6 +4,8 @@
 
 #include <new>
 #include <map>
+#include <mutex>
+#include <assert.h>
 #include <iostream>
 
 static std::map<std::size_t, std::size_t> &getSizeMap() {
