@@ -9,8 +9,13 @@
 
 void ReaderManager::addReader(Chunk *chunk) {
     readers.emplace_back(chunk, [](Reader *reader) {
-        FileReader<Decompressor<Decoder<QueuePublisher>>> pipe(std::ref(reader->queue));
-        pipe.read(reader->chunk->getFilename(), [reader](){return reader->shouldRun.test_and_set();});
+        std::string filename = reader->chunk->getFilename();
+        std::cout << "Starting new thread " << std::this_thread::get_id() << " reading from " << filename << "..." << std::endl;
+        {
+            FileReader<Decompressor<Decoder<QueuePublisher>>> pipe(std::ref(reader->queue));
+            pipe.read(filename, [reader](){return reader->shouldRun.test_and_set();});
+        }
+        std::cout << "Ended reader thread " << std::this_thread::get_id() << std::endl;
     });
 }
 

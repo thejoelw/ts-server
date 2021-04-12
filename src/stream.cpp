@@ -48,17 +48,8 @@ void Stream::tick(SubscriberConnection &conn) {
     }
 }
 
-struct ChunkedAllocator {
-    static constexpr std::size_t minSize = 64 * 1024 * 1024;
-
-    std::shared_ptr<char> mem;
-    std::size_t remainingSize = 0;
-};
-
 void Stream::publish(const char *data, std::size_t size) {
     Instant now = Instant::now();
-
-    static thread_local ChunkedAllocator allocator;
 
     bool needsNewChunk = chunks.empty() || chunks.back().getStatus() != Chunk::Status::Live || chunks.back().getNumEvents() >= 1'000'000;
     bool needsNewMem = size > allocator.remainingSize;

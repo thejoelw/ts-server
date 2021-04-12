@@ -11,10 +11,6 @@ public:
         , bufSize(static_cast<Consumer *>(this)->getPrefferedSize())
     {}
 
-    ~FileReader() {
-        assert(!mem);
-    }
-
     template <typename ShouldRun>
     void read(const std::string &path, ShouldRun shouldRun) {
         std::ifstream hdl(path, std::ios::in | std::ios::binary);

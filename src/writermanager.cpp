@@ -66,7 +66,7 @@ void WriterManager::open(const std::string &filename) {
                     }
                 }
             }
-            std::cout << "Ended thread " << std::this_thread::get_id() << " (processed " << messageCount << " messages and " << eventCount << " events)" << std::endl;
+            std::cout << "Ended writer thread " << std::this_thread::get_id() << " (processed " << messageCount << " messages and " << eventCount << " events)" << std::endl;
         }
     }, filename, queue);
 }

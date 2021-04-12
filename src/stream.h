@@ -40,4 +40,12 @@ private:
     WriterManager writerManager;
 
     std::vector<SubscriberConnection *> realtimeSubscribers;
+
+    struct ChunkedAllocator {
+        static constexpr std::size_t minSize = 64 * 1024 * 1024;
+
+        std::shared_ptr<char> mem;
+        std::size_t remainingSize = 0;
+    };
+    ChunkedAllocator allocator;
 };
