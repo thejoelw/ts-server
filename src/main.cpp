@@ -65,15 +65,15 @@ int main(int argc, char **argv) {
 
     uWS::App::WebSocketBehavior<SubscriberConnection> subConfig = {
         .compression = uWS::DEDICATED_COMPRESSOR_256KB,
-        .maxPayloadLength = 16 * 1024 * 1024,
+        .maxPayloadLength = 16 * 1024 * 1024 - 16,
         .idleTimeout = 10,
-        .maxBackpressure = 1 * 1024 * 1024
+        .maxBackpressure = 64 * 1024 * 1024 - 16
     };
     uWS::App::WebSocketBehavior<PublisherConnection> pubConfig = {
         .compression = uWS::DISABLED,
-        .maxPayloadLength = 16 * 1024 * 1024,
+        .maxPayloadLength = 16 * 1024 * 1024 - 16,
         .idleTimeout = 10,
-        .maxBackpressure = 1 * 1024 * 1024
+        .maxBackpressure = 1 * 1024 * 1024 - 16
     };
 
     subConfig.upgrade = [&streams](uWS::HttpResponse<false> *res, uWS::HttpRequest *req, struct us_socket_context_t *socketCtx) {

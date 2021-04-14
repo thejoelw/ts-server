@@ -74,7 +74,7 @@ private:
     std::uint64_t timeRegister = 0;
     std::uint64_t sizeRegister = 0;
 
-    static constexpr std::size_t metaBufSize = 1024 * 1024;
+    static constexpr std::size_t metaBufSize = 1024 * 1024 - 16;
     std::unique_ptr<char[]> metaBufMem;
     std::size_t metaBufRemainingSize = 0;
 
