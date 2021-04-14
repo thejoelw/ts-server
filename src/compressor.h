@@ -16,6 +16,7 @@ public:
         , outBuf { 0, ZSTD_CStreamOutSize(), ZSTD_CStreamOutSize() }
     {
         checkZstdRes(ZSTD_CCtx_setParameter(context, ZSTD_c_compressionLevel, 16));
+//        checkZstdRes(ZSTD_CCtx_setParameter(context, ZSTD_c_compressionLevel, ZSTD_minCLevel()));
         checkZstdRes(ZSTD_CCtx_setParameter(context, ZSTD_c_checksumFlag, 1));
     }
 

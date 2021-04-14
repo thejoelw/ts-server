@@ -32,7 +32,7 @@ else
 
     CFLAGS += -Wno-psabi
     # CFLAGS += -mcpu=native -march=native # Causes problems for RPI
-    LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd -pthread -lstdc++fs
+    LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -L`jemalloc-config --libdir` -Wl,-rpath,`jemalloc-config --libdir` -ljemalloc `jemalloc-config --libs` -lz -lzstd -pthread -lstdc++fs
 endif
 
 !cpp = |> $(CXX) $(CFLAGS) $(CFLAGS_%f) -c %f -o %o |> %f.o $(ROOT)/<src_objects>
