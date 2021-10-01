@@ -28,6 +28,9 @@ SubWsConn::SendStatus SubscriberConnection::emit(Event event) {
     if (event.time >= spec.beginTime) {
         if (event.time < spec.endTime) {
             SubWsConn::SendStatus status = wsConn->send(std::string_view(event.data, event.size), uWS::OpCode::BINARY, true);
+            if (status == SubWsConn::SendStatus::DROPPED) {
+                throw BackoffException();
+            }
             if (--spec.head == 0) {
                 spec.endTime = Instant::fromUint64(0);
                 dispatchClose();

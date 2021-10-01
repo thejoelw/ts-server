@@ -72,15 +72,15 @@ void Chunk::tick(SubscriberConnection &conn) {
 
 void Chunk::emitEvents(SubscriberConnection &conn) {
     while (conn.nextEventId < events.size()) {
-        SubWsConn::SendStatus status = conn.emit(events[conn.nextEventId++]);
+        SubWsConn::SendStatus status = conn.emit(events[conn.nextEventId]);
+        conn.nextEventId++;
         switch (status) {
-            case SubWsConn::SendStatus::BACKPRESSURE:
-                throw SubscriberConnection::BackoffException();
-            case SubWsConn::SendStatus::SUCCESS:
-                break;
-            case SubWsConn::SendStatus::DROPPED:
-                conn.nextEventId--;
-                throw SubscriberConnection::BackoffException();
+        case SubWsConn::SendStatus::BACKPRESSURE:
+            throw SubscriberConnection::BackoffException();
+        case SubWsConn::SendStatus::SUCCESS:
+            break;
+        case SubWsConn::SendStatus::DROPPED:
+            assert(false);
         }
     }
 }

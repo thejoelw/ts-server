@@ -1,6 +1,6 @@
 #pragma once
 
-#include "uWebSockets/src/WebSocket.h"
+#include "uWebSockets/src/App.h"
 
 class PublisherConnection;
 

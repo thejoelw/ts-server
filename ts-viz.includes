@@ -1,6 +1,0 @@
-src/
-third_party/
-third_party/spdlog/include/
-third_party/rapidjson/include/
-build-qtc/src/
-src/app

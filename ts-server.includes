@@ -2,4 +2,5 @@ src/
 third_party/
 third_party/spdlog/include/
 third_party/rapidjson/include/
+third_party/uWebSockets/uSockets/src/
 build-qtc/src/

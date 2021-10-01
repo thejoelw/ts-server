@@ -6,7 +6,7 @@
 #include "subspec.h"
 #include "baseexception.h"
 
-#include "uWebSockets/src/WebSocket.h"
+#include "uWebSockets/src/App.h"
 
 class SubscriberConnection;
 
