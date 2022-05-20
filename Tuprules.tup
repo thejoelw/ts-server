@@ -24,8 +24,8 @@ ifeq (@(TUP_PLATFORM),macosx)
     CC = clang
     CXX = clang++
 
-    CFLAGS += -stdlib=libc++
-    LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz -lzstd
+    CFLAGS += -stdlib=libc++ `pkg-config --cflags-only-I libzstd`
+    LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz `pkg-config --static --libs libzstd`
 else
     CC = gcc
     CXX = g++
