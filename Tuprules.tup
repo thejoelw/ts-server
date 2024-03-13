@@ -25,14 +25,14 @@ ifeq (@(TUP_PLATFORM),macosx)
     CXX = clang++
 
     CFLAGS += -stdlib=libc++ `pkg-config --cflags-only-I libzstd`
-    LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -lz `pkg-config --static --libs libzstd`
+    LDFLAGS += third_party/uWebSockets/uSockets/*.o -lz `pkg-config --static --libs libzstd`
 else
     CC = gcc
     CXX = g++
 
     CFLAGS += -Wno-psabi
     # CFLAGS += -mcpu=native -march=native # Causes problems for RPI
-    LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -L`jemalloc-config --libdir` -Wl,-rpath,`jemalloc-config --libdir` -ljemalloc `jemalloc-config --libs` -lz -lzstd -pthread -lstdc++fs
+    LDFLAGS += third_party/uWebSockets/uSockets/*.o -ljemalloc -lm -lstdc++ -pthread -lz -lzstd -pthread -lstdc++fs
 endif
 
 !cpp = |> $(CXX) $(CFLAGS) $(CFLAGS_%f) -DMAX_LOADED_CHUNKS=@(MAX_LOADED_CHUNKS) -c %f -o %o |> %f.o $(ROOT)/<src_objects>
