@@ -35,7 +35,7 @@ else
     LDFLAGS += ../third_party/uWebSockets/uSockets/*.o -L`jemalloc-config --libdir` -Wl,-rpath,`jemalloc-config --libdir` -ljemalloc `jemalloc-config --libs` -lz -lzstd -pthread -lstdc++fs
 endif
 
-!cpp = |> $(CXX) $(CFLAGS) $(CFLAGS_%f) -c %f -o %o |> %f.o $(ROOT)/<src_objects>
+!cpp = |> $(CXX) $(CFLAGS) $(CFLAGS_%f) -DMAX_LOADED_CHUNKS=@(MAX_LOADED_CHUNKS) -c %f -o %o |> %f.o $(ROOT)/<src_objects>
 # !archive = |> ar rs %o |>
 !link = |> $(CXX) $(CFLAGS) -o %o %<src_objects> $(LDFLAGS) |> $(BIN_TARGET)
 !write_linker_cmd = |> echo "$(CXX) $(CFLAGS) -o $(BIN_TARGET) %<src_objects> $(LDFLAGS)" > %o |> link.sh

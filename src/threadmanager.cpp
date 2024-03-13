@@ -4,7 +4,7 @@
 #include <sstream>
 #include <assert.h>
 
-static constexpr unsigned int maxJoiningThreads = 4;
+static constexpr unsigned int maxJoiningThreads = 12;
 
 ThreadManager::~ThreadManager() {
     assert(threads.empty());
