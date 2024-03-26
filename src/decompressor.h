@@ -19,7 +19,7 @@ public:
     ~Decompressor() {
         mem = static_cast<Consumer *>(this)->onBestow(std::move(mem));
 
-        if (!frameEnded) {
+        if (!ended) {
             static_cast<Consumer *>(this)->onError("ZSTD frame is not ended!");
         }
 
@@ -31,16 +31,28 @@ public:
     }
 
     void onData(const char *data, std::size_t size) {
+        if (ended) {
+            static_cast<Consumer *>(this)->onError("More data after ZSTD frame ended!");
+            return;
+        }
+
         ZSTD_inBuffer inBuf = { data, size, 0 };
         while (inBuf.pos < inBuf.size) {
             prepareOutBuf();
             std::size_t prevPos = outBuf.pos;
             std::size_t res = ZSTD_decompressStream(context, &outBuf, &inBuf);
-            checkZstdRes(res);
+            
+            if (ZSTD_isError(res)) {
+                static_cast<Consumer *>(this)->onError(std::string("Zstd error: ") + ZSTD_getErrorName(res));
+                ended = true;
+                break;
+            }
+
             if (outBuf.pos != prevPos) {
                 static_cast<Consumer *>(this)->onData(static_cast<char *>(outBuf.dst) + prevPos, outBuf.pos - prevPos);
             }
-            frameEnded = res == 0;
+
+            ended = res == 0;
         }
     }
 
@@ -54,7 +66,7 @@ private:
     ZSTD_DCtx* context;
     std::unique_ptr<char[]> mem;
     ZSTD_outBuffer outBuf;
-    bool frameEnded = true;
+    bool ended = false;
 
     void prepareOutBuf() {
         if (outBuf.pos == outBuf.size) {
@@ -65,18 +77,6 @@ private:
             outBuf.dst = mem.get();
             assert(outBuf.size == ZSTD_DStreamOutSize());
             outBuf.pos = 0;
-        }
-    }
-
-    void checkZstdRes(std::size_t code) {
-        if (ZSTD_isError(code)) {
-            static thread_local unsigned int remaining = 10;
-            if (remaining) {
-                static_cast<Consumer *>(this)->onError(std::string("Zstd error: ") + ZSTD_getErrorName(code));
-                if (--remaining == 0) {
-                    static_cast<Consumer *>(this)->onError("Zstd errors truncated");
-                }
-            }
         }
     }
 };

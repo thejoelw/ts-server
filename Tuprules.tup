@@ -7,7 +7,7 @@ BIN_TARGET = $(ROOT)/ts-server
 
 CFLAGS += -std=c++17
 # CFLAGS += -flto
-CFLAGS += -Wall -Werror -Wno-missing-braces -Wno-unused -Wno-expansion-to-defined -Wno-error=address
+CFLAGS += -Wall -Werror -Wno-deprecated-declarations -Wno-missing-braces -Wno-unused -Wno-expansion-to-defined -Wno-error=address
 CFLAGS += -I$(SRC_PATH) -I$(THIRD_PARTY_PATH) -I$(THIRD_PARTY_PATH)/spdlog/include -I$(THIRD_PARTY_PATH)/rapidjson/include -I$(THIRD_PARTY_PATH)/websocketpp -I$(THIRD_PARTY_PATH)/uWebSockets/uSockets/src
 
 ifeq (@(BUILD_TYPE),debug)
