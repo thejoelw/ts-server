@@ -9,7 +9,9 @@ Building:
 ```sh
 git clone git@github.com:thejoelw/ts-server.git
 cd ts-server
+bash third_party/update.bash
 tup init
+tup variant configs/*
 tup
 ```
 
