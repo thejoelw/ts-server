@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.25)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ZSTD REQUIRED IMPORTED_TARGET libzstd)
@@ -18,6 +18,7 @@ add_compile_options(-Wno-missing-braces)
 add_compile_options(-Wno-unused)
 add_compile_options(-Wno-expansion-to-defined)
 add_compile_options(-Wno-error=address)
+add_compile_options(-Wno-maybe-uninitialized)
 
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-O0 -g -ggdb")
 set(CMAKE_CXX_FLAGS_RELEASE_INIT "-O3 -ffast-math -fno-finite-math-only -fvisibility=hidden -DNDEBUG")
