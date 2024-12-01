@@ -66,13 +66,13 @@ int main(int argc, char **argv) {
     uWS::App::WebSocketBehavior<SubscriberConnection> subConfig = {
         .compression = uWS::DEDICATED_COMPRESSOR_256KB,
         .maxPayloadLength = 16 * 1024 * 1024 - 16,
-        .idleTimeout = 120,
+        .idleTimeout = 10 * 60,
         .maxBackpressure = 0
     };
     uWS::App::WebSocketBehavior<PublisherConnection> pubConfig = {
         .compression = uWS::DISABLED,
         .maxPayloadLength = 16 * 1024 * 1024 - 16,
-        .idleTimeout = 120,
+        .idleTimeout = 10 * 60,
         .maxBackpressure = 0
     };
 
