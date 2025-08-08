@@ -10,7 +10,6 @@ project(ts-server VERSION 1.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# add_compile_options(-flto)
 add_compile_options(-Wall)
 add_compile_options(-Werror)
 add_compile_options(-Wno-deprecated-declarations)
@@ -40,4 +39,5 @@ add_executable(ts-server ${SOURCES})
 
 target_compile_definitions(ts-server PRIVATE "MAX_LOADED_CHUNKS=$<IF:$<CONFIG:Release>,16,4>")
 
+set_property(TARGET ts-server PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 target_link_libraries(ts-server PUBLIC PkgConfig::ZSTD PkgConfig::ZLIB PkgConfig::JEMALLOC ${USOCKETS_OBJS})

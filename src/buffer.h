@@ -22,6 +22,11 @@ public:
     void onData(const char *data, std::size_t size) {
         if (bufIdx + size > bufSize) {
             flush();
+
+            if (size >= bufSize) {
+                static_cast<Consumer *>(this)->onData(data, size);
+                return;
+            }
         }
         std::copy_n(data, size, bufMem.get() + bufIdx);
         bufIdx += size;
