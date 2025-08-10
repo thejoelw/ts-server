@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include "instant.h"
 
 class SubSpec {
@@ -9,4 +10,6 @@ public:
 
     std::uint64_t head;
     std::uint64_t tail;
+    
+    std::string jqQuery;
 };

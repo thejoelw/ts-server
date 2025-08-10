@@ -17,22 +17,22 @@ ifeq (@(BUILD_TYPE),debug)
     CFLAGS += -O0 -g -fdebug-prefix-map=`pwd`=`pwd | sed 's/\/\.tup\/.*//'`
 endif
 ifeq (@(BUILD_TYPE),release)
-    CFLAGS += -O3 -ffast-math -fno-finite-math-only -fvisibility=hidden -DNDEBUG
+    CFLAGS += -O3 -fvisibility=hidden -DNDEBUG
 endif
 
 ifeq (@(TUP_PLATFORM),macosx)
     CC = clang
     CXX = clang++
 
-    CFLAGS += -stdlib=libc++ `pkg-config --cflags-only-I libzstd`
-    LDFLAGS += third_party/uWebSockets/uSockets/*.o -lz `pkg-config --static --libs libzstd`
+    CFLAGS += -stdlib=libc++ `pkg-config --cflags-only-I libzstd libjq`
+    LDFLAGS += third_party/uWebSockets/uSockets/*.o -lz `pkg-config --static --libs libzstd libjq`
 else
     CC = gcc
     CXX = g++
 
     CFLAGS += -Wno-psabi
     # CFLAGS += -mcpu=native -march=native # Causes problems for RPI
-    LDFLAGS += third_party/uWebSockets/uSockets/*.o -ljemalloc -lm -lstdc++ -pthread -lz -lzstd -pthread -lstdc++fs
+    LDFLAGS += third_party/uWebSockets/uSockets/*.o -ljemalloc -lm -lstdc++ -pthread -lz -lzstd -ljq -pthread -lstdc++fs
 endif
 
 !cpp = |> $(CXX) $(CFLAGS) $(CFLAGS_%f) -DMAX_LOADED_CHUNKS=@(MAX_LOADED_CHUNKS) -c %f -o %o |> %f.o $(ROOT)/<src_objects>

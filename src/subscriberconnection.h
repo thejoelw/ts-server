@@ -1,10 +1,11 @@
 #pragma once
 
 #include <string_view>
+#include <memory>
 
 #include "event.h"
 #include "subspec.h"
-#include "baseexception.h"
+#include "jqprocessor.h"
 
 #include "uWebSockets/src/App.h"
 
@@ -16,13 +17,6 @@ typedef uWS::WebSocket<false, true, SubscriberConnection> SubWsConn;
 
 class SubscriberConnection {
 public:
-    class BackoffException : public BaseException {
-    public:
-        BackoffException()
-            : BaseException("backoff")
-        {}
-    };
-
     SubscriberConnection();
     SubscriberConnection(Stream *topic, SubSpec spec);
 
@@ -30,13 +24,17 @@ public:
 
     Stream *stream = 0;
     SubSpec spec;
+    std::unique_ptr<JqProcessor> jqProcessor;
 
     std::size_t nextChunkId;
     std::size_t nextEventId;
 
+    std::vector<std::string> emitQueue;
+
     void tick();
 
-    SubWsConn::SendStatus emit(Event event);
+    // Returns true if there's backpressure
+    bool emit(Event event);
 
     void dispatchClose();
 };

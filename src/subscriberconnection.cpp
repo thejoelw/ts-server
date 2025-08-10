@@ -14,33 +14,73 @@ SubscriberConnection::SubscriberConnection(Stream *stream, SubSpec spec)
     , spec(spec)
     , nextChunkId(stream->getInitChunkId(spec.beginTime))
     , nextEventId(nextChunkId < stream->getNumChunks() ? stream->getChunk(nextChunkId).getInitEventId(spec.beginTime) : 0)
-{}
+{
+    if (!spec.jqQuery.empty()) {
+        jqProcessor = std::make_unique<JqProcessor>(spec.jqQuery);
+    }
+}
 
 void SubscriberConnection::tick() {
     wsConn->cork([this]() {
-        try {
-            stream->tick(*this);
-        } catch (const BackoffException &ex) {}
+        stream->tick(*this);
     });
 }
 
-SubWsConn::SendStatus SubscriberConnection::emit(Event event) {
-    if (event.time >= spec.beginTime) {
-        if (event.time < spec.endTime) {
-            SubWsConn::SendStatus status = wsConn->send(std::string_view(event.data, event.size), uWS::OpCode::BINARY, true);
-            if (status == SubWsConn::SendStatus::DROPPED) {
-                throw BackoffException();
-            }
-            if (--spec.head == 0) {
-                spec.endTime = Instant::fromUint64(0);
-                dispatchClose();
-            }
-            return status;
-        } else {
-            dispatchClose();
-        }
+bool SubscriberConnection::emit(Event event) {
+    if (event.time < spec.beginTime) {
+        return false;
     }
-    return SubWsConn::SendStatus::SUCCESS;
+
+    if (event.time >= spec.endTime) {
+        dispatchClose();
+        return false;
+    }
+
+    SubWsConn::SendStatus status;
+
+    if (!emitQueue.empty()) {
+        std::vector<std::string>::const_iterator it = emitQueue.cbegin();
+        while (it != emitQueue.cend()) {
+            SubWsConn::SendStatus status = wsConn->send(*it, uWS::OpCode::BINARY, true);
+            if (status == SubWsConn::SendStatus::BACKPRESSURE) {
+                status = SubWsConn::SendStatus::BACKPRESSURE;
+            } else if (status == SubWsConn::SendStatus::DROPPED) {
+                status = SubWsConn::SendStatus::DROPPED;
+                break;
+            }
+        }
+        emitQueue.erase(emitQueue.begin(), it);
+    }
+
+    std::string_view eventStr(event.data, event.size);
+
+    // Apply JQ filter if configured
+    if (jqProcessor) {
+        status = SubWsConn::SendStatus::SUCCESS;
+        jqProcessor->process(eventStr, [this, &status](std::string_view data) {
+            if (status == SubWsConn::SendStatus::DROPPED) {
+                emitQueue.emplace_back(data);
+                return;
+            }
+
+            SubWsConn::SendStatus curStatus = wsConn->send(data, uWS::OpCode::BINARY, true);
+            if (curStatus == SubWsConn::SendStatus::BACKPRESSURE) {
+                status = SubWsConn::SendStatus::BACKPRESSURE;
+            } else if (curStatus == SubWsConn::SendStatus::DROPPED) {
+                status = SubWsConn::SendStatus::DROPPED;
+                emitQueue.emplace_back(data);
+            }
+        });
+    } else {
+        status = wsConn->send(eventStr, uWS::OpCode::BINARY, true);
+    }
+
+    if (--spec.head == 0) {
+        spec.endTime = Instant::fromUint64(0);
+        dispatchClose();
+    }
+
+    return status != SubWsConn::SendStatus::SUCCESS;
 }
 
 void SubscriberConnection::dispatchClose() {

@@ -14,9 +14,9 @@
 #include "pubconnmanager.h"
 #include "publisherconnection.h"
 #include "instant.h"
-#include "baseexception.h"
 #include "threadmanager.h"
 #include "memory.h"
+#include "badrequestexception.h"
 
 int main(int argc, char **argv) {
     if (argc != 2) {
@@ -77,13 +77,6 @@ int main(int argc, char **argv) {
     };
 
     subConfig.upgrade = [&streams](uWS::HttpResponse<false> *res, uWS::HttpRequest *req, struct us_socket_context_t *socketCtx) {
-        class BadRequestException : public BaseException {
-        public:
-            BadRequestException(const std::string &msg)
-                : BaseException("Bad Request: " + msg)
-            {}
-        };
-
         try {
             auto getQuery = [req](const char *key, const char *def) -> std::string {
                 std::string_view value = req->getQuery(key);
@@ -160,6 +153,7 @@ int main(int argc, char **argv) {
             Instant endTime = parseTime(getQuery("end", ""));
             std::uint64_t head = std::stoull(getQuery("head", "18446744073709551615"));
             std::uint64_t tail = std::stoull(getQuery("tail", "18446744073709551615"));
+            std::string jqQuery = getQuery("jq", "");
 
             if (head != 18446744073709551615ull && tail != 18446744073709551615ull) {
                 throw BadRequestException("Cannot specify both head and tail");
@@ -171,7 +165,7 @@ int main(int argc, char **argv) {
             }
 
             res->template upgrade<SubscriberConnection>(
-                SubscriberConnection(stream, SubSpec{ .beginTime = beginTime, .endTime = endTime, .head = head, .tail = tail}),
+                SubscriberConnection(stream, SubSpec{ .beginTime = beginTime, .endTime = endTime, .head = head, .tail = tail, .jqQuery = jqQuery }),
                 req->getHeader("sec-websocket-key"),
                 req->getHeader("sec-websocket-protocol"),
                 req->getHeader("sec-websocket-extensions"),
@@ -194,13 +188,6 @@ int main(int argc, char **argv) {
     };
 
     pubConfig.upgrade = [&streams](uWS::HttpResponse<false> *res, uWS::HttpRequest *req, struct us_socket_context_t *socketCtx) {
-        class BadRequestException : public BaseException {
-        public:
-            BadRequestException(const std::string &msg)
-                : BaseException("Bad Request: " + msg)
-            {}
-        };
-
         try {
             auto getQuery = [req](const char *key, const char *def) -> std::string {
                 std::string_view value = req->getQuery(key);

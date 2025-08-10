@@ -4,6 +4,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(ZSTD REQUIRED IMPORTED_TARGET libzstd)
 pkg_check_modules(ZLIB REQUIRED IMPORTED_TARGET zlib)
 pkg_check_modules(JEMALLOC REQUIRED IMPORTED_TARGET jemalloc)
+pkg_check_modules(JQ REQUIRED IMPORTED_TARGET libjq)
 
 project(ts-server VERSION 1.0)
 
@@ -17,7 +18,6 @@ add_compile_options(-Wno-missing-braces)
 add_compile_options(-Wno-unused)
 add_compile_options(-Wno-expansion-to-defined)
 add_compile_options(-Wno-error=address)
-add_compile_options(-Wno-maybe-uninitialized)
 
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-O0 -g -ggdb")
 set(CMAKE_CXX_FLAGS_RELEASE_INIT "-O3 -ffast-math -fno-finite-math-only -fvisibility=hidden -DNDEBUG")
@@ -39,5 +39,5 @@ add_executable(ts-server ${SOURCES})
 
 target_compile_definitions(ts-server PRIVATE "MAX_LOADED_CHUNKS=$<IF:$<CONFIG:Release>,16,4>")
 
-set_property(TARGET ts-server PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-target_link_libraries(ts-server PUBLIC PkgConfig::ZSTD PkgConfig::ZLIB PkgConfig::JEMALLOC ${USOCKETS_OBJS})
+set_property(TARGET ts-server PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+target_link_libraries(ts-server PUBLIC PkgConfig::ZSTD PkgConfig::ZLIB PkgConfig::JEMALLOC PkgConfig::JQ ${USOCKETS_OBJS})
