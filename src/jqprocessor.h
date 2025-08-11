@@ -38,7 +38,8 @@ public:
         jv result;
         while (jv_is_valid(result = jq_next(jq))) {
             jv str = jv_dump_string(result, 0);
-            callback(std::string_view(jv_string_value(str)));
+            str = jv_string_append_buf(str, "\n", 1);
+            callback(std::string_view(jv_string_value(str), jv_string_length_bytes(jv_copy(str))));
             jv_free(str);
         }
 
