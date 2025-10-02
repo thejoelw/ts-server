@@ -33,8 +33,7 @@ public:
 
     void tick();
 
-    // Returns true if there's backpressure
-    bool emit(Event event);
+    SubWsConn::SendStatus emit(Event event);
 
     void dispatchClose();
 };

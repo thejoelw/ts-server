@@ -58,22 +58,34 @@ void Chunk::tick(SubscriberConnection &conn) {
         break;
 
     case Status::Done:
-        emitEvents(conn);
-        conn.nextChunkId++;
-        conn.nextEventId = 0;
+        if (emitEvents(conn)) {
+            conn.nextChunkId++;
+            conn.nextEventId = 0;
+        }
         break;
 
     case Status::Live:
-        emitEvents(conn);
-        stream->addRealtimeSub(&conn);
+        if (emitEvents(conn)) {
+            stream->addRealtimeSub(&conn);
+        }
         break;
     }
 }
 
-void Chunk::emitEvents(SubscriberConnection &conn) {
+bool Chunk::emitEvents(SubscriberConnection &conn) {
     while (conn.nextEventId < events.size()) {
-        if (conn.emit(events[conn.nextEventId++])) {
+        SubWsConn::SendStatus status = conn.emit(events[conn.nextEventId]);
+        switch (status) {
+        case SubWsConn::SendStatus::SUCCESS:
+            conn.nextEventId++;
             break;
+        case SubWsConn::SendStatus::BACKPRESSURE:
+            conn.nextEventId++;
+            return false;
+        case SubWsConn::SendStatus::DROPPED:
+            return false;
         }
     }
+
+    return true;
 }

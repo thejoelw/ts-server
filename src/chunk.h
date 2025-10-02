@@ -59,5 +59,5 @@ private:
         std::vector<std::vector<char>>
     > bestowed;
 
-    void emitEvents(SubscriberConnection &conn);
+    bool emitEvents(SubscriberConnection &conn);
 };
