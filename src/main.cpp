@@ -19,10 +19,12 @@
 #include "threadmanager.h"
 
 int main(int argc, char **argv) {
-  if (argc != 2) {
-    std::cerr << "Usage: ./ts-server [data path]" << std::endl;
+  if (argc != 2 && argc != 3) {
+    std::cerr << "Usage: ./ts-server [data path] [port=9001]" << std::endl;
     return 1;
   }
+
+  unsigned int port = argc == 3 ? std::stoi(argv[2]) : 9001;
 
   Options::getMutableOptions().dataPath = argv[1];
   while (Options::getMutableOptions().dataPath.back() == '/') {
@@ -281,11 +283,11 @@ int main(int argc, char **argv) {
   app.ws<SubscriberConnection>("/sub", std::move(subConfig))
       .ws<PublisherConnection>("/pub", std::move(pubConfig))
       .listen(
-          9001,
-          [&appListenSocket](us_listen_socket_t *listenSocket) {
+          port,
+          [&appListenSocket, port](us_listen_socket_t *listenSocket) {
             appListenSocket = listenSocket;
             if (listenSocket) {
-              std::cout << "Listening on port " << 9001 << std::endl;
+              std::cout << "Listening on port " << port << std::endl;
             }
           }
       )
