@@ -1,39 +1,35 @@
 #pragma once
 
-#include <variant>
 #include <memory>
-#include <vector>
 #include <string>
+#include <variant>
+#include <vector>
 
 #include "uWebSockets/src/MoveOnlyFunction.h"
 
 #include "event.h"
 
 struct Commit {
-    Commit(uWS::MoveOnlyFunction<void()> &&onFlush)
-        : onFlush(std::move(onFlush))
-    {}
+  Commit(uWS::MoveOnlyFunction<void()> &&onFlush)
+      : onFlush(std::move(onFlush)) {}
 
-    uWS::MoveOnlyFunction<void()> onFlush;
+  uWS::MoveOnlyFunction<void()> onFlush;
 };
 
-template <typename MemType>
-struct Bestow {
-    Bestow(MemType &&mem)
-        : mem(std::move(mem))
-    {}
+template <typename MemType> struct Bestow {
+  Bestow(MemType &&mem)
+      : mem(std::move(mem)) {}
 
-    MemType mem;
+  MemType mem;
 };
 struct Yield {};
 struct Join {};
 
 struct Error {
-    Error(std::string_view msg)
-        : msg(msg)
-    {}
+  Error(std::string_view msg)
+      : msg(msg) {}
 
-    std::string msg;
+  std::string msg;
 };
 
 typedef std::variant<
@@ -45,5 +41,5 @@ typedef std::variant<
     Bestow<std::vector<char>>,
     Yield,
     Join,
-    Error
-> QueueMessage;
+    Error>
+    QueueMessage;

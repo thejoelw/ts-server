@@ -2,50 +2,50 @@
 
 #include <deque>
 
-#include "instant.h"
 #include "chunk.h"
 #include "event.h"
+#include "instant.h"
 #include "writermanager.h"
 
 class SubscriberConnection;
 
 class Stream {
 public:
-    Stream(const std::string &key);
-    ~Stream();
+  Stream(const std::string &key);
+  ~Stream();
 
-    const std::string &getKey() const { return key; }
+  const std::string &getKey() const { return key; }
 
-    std::size_t getInitChunkId(Instant beginTime);
+  std::size_t getInitChunkId(Instant beginTime);
 
-    std::size_t getNumChunks() const { return chunks.size(); }
-    Chunk &getChunk(std::size_t chunkId) {
-        assert(chunkId < chunks.size());
-        return chunks[chunkId];
-    }
+  std::size_t getNumChunks() const { return chunks.size(); }
+  Chunk &getChunk(std::size_t chunkId) {
+    assert(chunkId < chunks.size());
+    return chunks[chunkId];
+  }
 
-    void tick(SubscriberConnection &conn);
+  void tick(SubscriberConnection &conn);
 
-    void publish(const char *data, std::size_t size);
-    void commit(Commit commit);
+  void publish(const char *data, std::size_t size);
+  void commit(Commit commit);
 
-    void addRealtimeSub(SubscriberConnection *conn);
-    void removeRealtimeSub(SubscriberConnection *conn);
+  void addRealtimeSub(SubscriberConnection *conn);
+  void removeRealtimeSub(SubscriberConnection *conn);
 
 private:
-    std::string key;
+  std::string key;
 
-    std::deque<Chunk> chunks;
+  std::deque<Chunk> chunks;
 
-    WriterManager writerManager;
+  WriterManager writerManager;
 
-    std::vector<SubscriberConnection *> realtimeSubscribers;
+  std::vector<SubscriberConnection *> realtimeSubscribers;
 
-    struct ChunkedAllocator {
-        static constexpr std::size_t minSize = 64 * 1024 * 1024 - 16;
+  struct ChunkedAllocator {
+    static constexpr std::size_t minSize = 64 * 1024 * 1024 - 16;
 
-        std::shared_ptr<char> mem;
-        std::size_t remainingSize = 0;
-    };
-    ChunkedAllocator allocator;
+    std::shared_ptr<char> mem;
+    std::size_t remainingSize = 0;
+  };
+  ChunkedAllocator allocator;
 };

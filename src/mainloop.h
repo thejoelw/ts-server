@@ -4,10 +4,10 @@
 
 class MainLoop {
 public:
-    static MainLoop &getInstance() {
-        static MainLoop inst;
-        return inst;
-    }
+  static MainLoop &getInstance() {
+    static MainLoop inst;
+    return inst;
+  }
 
-    uWS::Loop *loop = 0;
+  uWS::Loop *loop = 0;
 };

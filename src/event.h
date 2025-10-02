@@ -4,13 +4,12 @@
 
 class Event {
 public:
-    Event(Instant time, const char *data, std::size_t size)
-        : time(time)
-        , data(data)
-        , size(size)
-    {}
+  Event(Instant time, const char *data, std::size_t size)
+      : time(time)
+      , data(data)
+      , size(size) {}
 
-    Instant time;
-    const char *data;
-    std::size_t size;
+  Instant time;
+  const char *data;
+  std::size_t size;
 };

@@ -1,11 +1,11 @@
 #pragma once
 
-#include <string_view>
 #include <memory>
+#include <string_view>
 
 #include "event.h"
-#include "subspec.h"
 #include "jqprocessor.h"
+#include "subspec.h"
 
 #include "uWebSockets/src/App.h"
 
@@ -17,23 +17,23 @@ typedef uWS::WebSocket<false, true, SubscriberConnection> SubWsConn;
 
 class SubscriberConnection {
 public:
-    SubscriberConnection();
-    SubscriberConnection(Stream *topic, SubSpec spec);
+  SubscriberConnection();
+  SubscriberConnection(Stream *topic, SubSpec spec);
 
-    SubWsConn *wsConn = 0;
+  SubWsConn *wsConn = 0;
 
-    Stream *stream = 0;
-    SubSpec spec;
-    std::unique_ptr<JqProcessor> jqProcessor;
+  Stream *stream = 0;
+  SubSpec spec;
+  std::unique_ptr<JqProcessor> jqProcessor;
 
-    std::size_t nextChunkId;
-    std::size_t nextEventId;
+  std::size_t nextChunkId;
+  std::size_t nextEventId;
 
-    std::vector<std::string> emitQueue;
+  std::vector<std::string> emitQueue;
 
-    void tick();
+  void tick();
 
-    SubWsConn::SendStatus emit(Event event);
+  SubWsConn::SendStatus emit(Event event);
 
-    void dispatchClose();
+  void dispatchClose();
 };

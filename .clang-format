@@ -1,0 +1,13 @@
+---
+BasedOnStyle: LLVM
+ColumnLimit: 100
+IndentWidth: 2
+---
+Language: Cpp
+AlignAfterOpenBracket: BlockIndent
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma
+BinPackArguments: false
+BinPackParameters: OnePerLine
+...
+

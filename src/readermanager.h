@@ -2,8 +2,8 @@
 
 #include "readerwriterqueue/readerwriterqueue.h"
 
-#include <thread>
 #include <deque>
+#include <thread>
 
 #include "queuemessage.h"
 
@@ -11,35 +11,34 @@ class Chunk;
 
 class ReaderManager {
 private:
-    struct Reader {
-        template <typename Func>
-        Reader(Chunk *chunk, Func func)
-            : chunk(chunk)
-        {
-            shouldRun.test_and_set();
-            thread = std::thread(func, this);
-        }
-
-        Chunk *chunk;
-        moodycamel::ReaderWriterQueue<QueueMessage> queue;
-        std::thread thread;
-        std::atomic_flag shouldRun = ATOMIC_FLAG_INIT;
-    };
-
-public:
-    static ReaderManager &getInstance() {
-        static ReaderManager inst;
-        return inst;
+  struct Reader {
+    template <typename Func>
+    Reader(Chunk *chunk, Func func)
+        : chunk(chunk) {
+      shouldRun.test_and_set();
+      thread = std::thread(func, this);
     }
 
-    ~ReaderManager();
+    Chunk *chunk;
+    moodycamel::ReaderWriterQueue<QueueMessage> queue;
+    std::thread thread;
+    std::atomic_flag shouldRun = ATOMIC_FLAG_INIT;
+  };
 
-    void addReader(Chunk *chunk);
+public:
+  static ReaderManager &getInstance() {
+    static ReaderManager inst;
+    return inst;
+  }
 
-    void tick();
+  ~ReaderManager();
 
-    void joinAll();
+  void addReader(Chunk *chunk);
+
+  void tick();
+
+  void joinAll();
 
 private:
-    std::deque<Reader> readers;
+  std::deque<Reader> readers;
 };

@@ -1,22 +1,22 @@
 #pragma once
 
-#include <thread>
 #include <deque>
+#include <thread>
 
 class ThreadManager {
 public:
-    static ThreadManager &getInstance() {
-        static ThreadManager inst;
-        return inst;
-    }
+  static ThreadManager &getInstance() {
+    static ThreadManager inst;
+    return inst;
+  }
 
-    ~ThreadManager();
+  ~ThreadManager();
 
-    void enqueueJoin(std::thread &&thread);
-    void joinAll();
+  void enqueueJoin(std::thread &&thread);
+  void joinAll();
 
 private:
-    std::deque<std::thread> threads;
+  std::deque<std::thread> threads;
 
-    static void join(std::thread &thread);
+  static void join(std::thread &thread);
 };

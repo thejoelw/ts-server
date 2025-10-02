@@ -4,7 +4,6 @@
 
 class BadRequestException : public BaseException {
 public:
-    BadRequestException(const std::string &msg)
-        : BaseException("Bad Request: " + msg)
-    {}
+  BadRequestException(const std::string &msg)
+      : BaseException("Bad Request: " + msg) {}
 };

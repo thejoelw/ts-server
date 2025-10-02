@@ -6,12 +6,12 @@ class Chunk;
 
 class GarbageCollector {
 public:
-    static GarbageCollector &getInstance() {
-        static GarbageCollector inst;
-        return inst;
-    }
+  static GarbageCollector &getInstance() {
+    static GarbageCollector inst;
+    return inst;
+  }
 
-    void submitDone(Chunk *chunk);
+  void submitDone(Chunk *chunk);
 
-    std::deque<Chunk *> chunks;
+  std::deque<Chunk *> chunks;
 };

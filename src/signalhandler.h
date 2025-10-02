@@ -2,13 +2,13 @@
 
 class SignalHandler {
 public:
-    static SignalHandler &getInstance() {
-        static SignalHandler inst;
-        return inst;
-    }
+  static SignalHandler &getInstance() {
+    static SignalHandler inst;
+    return inst;
+  }
 
-    SignalHandler();
-    ~SignalHandler();
+  SignalHandler();
+  ~SignalHandler();
 
-    bool shouldExit();
+  bool shouldExit();
 };

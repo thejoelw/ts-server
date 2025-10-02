@@ -5,5 +5,4 @@
 PublisherConnection::PublisherConnection() {}
 
 PublisherConnection::PublisherConnection(Stream *topic)
-    : stream(topic)
-{}
+    : stream(topic) {}

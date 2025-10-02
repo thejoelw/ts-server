@@ -6,21 +6,21 @@ class SubscriberConnection;
 
 class SubConnManager {
 public:
-    static SubConnManager &getInstance() {
-        static SubConnManager inst;
-        return inst;
-    }
+  static SubConnManager &getInstance() {
+    static SubConnManager inst;
+    return inst;
+  }
 
-    void addConnection(SubscriberConnection *conn);
-    void removeConnection(SubscriberConnection *conn);
+  void addConnection(SubscriberConnection *conn);
+  void removeConnection(SubscriberConnection *conn);
 
-    void dispatchClose(SubscriberConnection *conn);
+  void dispatchClose(SubscriberConnection *conn);
 
-    void closeAll();
+  void closeAll();
 
-    void tick();
+  void tick();
 
 private:
-    std::vector<SubscriberConnection *> connections;
-    std::vector<SubscriberConnection *> closeQueue;
+  std::vector<SubscriberConnection *> connections;
+  std::vector<SubscriberConnection *> closeQueue;
 };

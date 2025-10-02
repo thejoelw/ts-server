@@ -10,10 +10,10 @@ typedef uWS::WebSocket<false, true, PublisherConnection> PubWsConn;
 
 class PublisherConnection {
 public:
-    PublisherConnection();
-    PublisherConnection(Stream *topic);
+  PublisherConnection();
+  PublisherConnection(Stream *topic);
 
-    PubWsConn *wsConn = 0;
+  PubWsConn *wsConn = 0;
 
-    Stream *stream = 0;
+  Stream *stream = 0;
 };
