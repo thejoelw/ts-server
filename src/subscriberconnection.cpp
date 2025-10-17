@@ -4,8 +4,7 @@
 #include "subconnmanager.h"
 
 SubscriberConnection::SubscriberConnection()
-    : spec(SubSpec{.beginTime = Instant::now(), .endTime = Instant::now(), .head = 0, .tail = 0})
-    , nextChunkId(static_cast<std::size_t>(-1))
+    : nextChunkId(static_cast<std::size_t>(-1))
     , nextEventId(static_cast<std::size_t>(-1)) {}
 
 SubscriberConnection::SubscriberConnection(Stream *stream, SubSpec spec)
@@ -22,8 +21,12 @@ SubscriberConnection::SubscriberConnection(Stream *stream, SubSpec spec)
   }
 }
 
-void SubscriberConnection::tick() {
+unsigned int SubscriberConnection::tick() {
   wsConn->cork([this]() { stream->tick(*this); });
+
+  unsigned int delayMs = tickDelayMs;
+  tickDelayMs = static_cast<unsigned int>(-1);
+  return delayMs;
 }
 
 SubWsConn::SendStatus SubscriberConnection::emit(Event event) {
@@ -53,6 +56,22 @@ SubWsConn::SendStatus SubscriberConnection::emit(Event event) {
 
     // Sent all events; clear the queue
     emitQueue.clear();
+  }
+
+  if (spec.printFirstEventTime) {
+    std::cerr << "First event time: " << event.time.toUint64() << " microseconds" << std::endl;
+    spec.printFirstEventTime = false;
+  }
+
+  if (spec.minDelay != SubSpec::disabledMinDelay) {
+    std::chrono::microseconds wait = spec.minDelay - (Instant::now() - event.time);
+    std::int64_t waitMs = std::chrono::duration_cast<std::chrono::milliseconds>(wait).count();
+    if (waitMs > 0) {
+      tickDelayMs = std::min<std::uint64_t>(waitMs, static_cast<unsigned int>(-1));
+
+      // Return DROPPED here because we didn't send the input event
+      return SubWsConn::SendStatus::DROPPED;
+    }
   }
 
   std::string_view eventStr(event.data, event.size);

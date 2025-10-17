@@ -28,13 +28,20 @@ void SubConnManager::closeAll() {
   }
 }
 
-void SubConnManager::tick() {
+unsigned int SubConnManager::tick() {
+  unsigned int waitMs = static_cast<unsigned int>(-1);
+
   for (SubscriberConnection *conn : closeQueue) {
     conn->wsConn->end();
   }
   closeQueue.clear();
 
   for (SubscriberConnection *conn : connections) {
-    conn->tick();
+    unsigned int connWaitMs = conn->tick();
+    if (connWaitMs < waitMs) {
+      waitMs = connWaitMs;
+    }
   }
+
+  return waitMs;
 }

@@ -31,7 +31,9 @@ public:
 
   std::vector<std::string> emitQueue;
 
-  void tick();
+  unsigned int tickDelayMs = static_cast<unsigned int>(-1);
+
+  unsigned int tick();
 
   SubWsConn::SendStatus emit(Event event);
 

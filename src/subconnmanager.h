@@ -18,7 +18,8 @@ public:
 
   void closeAll();
 
-  void tick();
+  // Returns the number of milliseconds to wait before the next tick
+  unsigned int tick();
 
 private:
   std::vector<SubscriberConnection *> connections;

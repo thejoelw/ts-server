@@ -9,15 +9,17 @@ public:
   Instant(InstantBase base)
       : InstantBase(base) {}
 
+  static Instant epoch() { return InstantBase(InstantBase::duration(0)); }
+
   static Instant now() {
     return Instant(
-        std::chrono::time_point_cast<Instant::duration>(std::chrono::system_clock::now())
+        std::chrono::time_point_cast<InstantBase::duration>(std::chrono::system_clock::now())
     );
   }
 
-  static Instant fromUint64(std::uint64_t num) { return InstantBase(Instant::duration(num)); }
+  static Instant fromUint64(std::uint64_t num) { return InstantBase(InstantBase::duration(num)); }
 
   std::uint64_t toUint64() const {
-    return std::chrono::time_point_cast<Instant::duration>(*this).time_since_epoch().count();
+    return std::chrono::time_point_cast<InstantBase::duration>(*this).time_since_epoch().count();
   }
 };

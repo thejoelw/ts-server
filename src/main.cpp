@@ -18,6 +18,35 @@
 #include "subscriberconnection.h"
 #include "threadmanager.h"
 
+static constexpr unsigned int timerMaxPeriodMs = 16;
+
+void timerCallback(struct us_timer_t *timer) {
+  if (SignalHandler::getInstance().shouldExit()) {
+    us_listen_socket_t *&appListenSocket =
+        **static_cast<us_listen_socket_t ***>(us_timer_ext(timer));
+    if (appListenSocket) {
+      PubConnManager::getInstance().closeAll();
+      SubConnManager::getInstance().closeAll();
+      us_timer_close(timer);
+      us_listen_socket_close(false, appListenSocket);
+      appListenSocket = 0;
+    }
+  } else {
+    ReaderManager::getInstance().tick();
+    unsigned int waitMs = SubConnManager::getInstance().tick();
+
+    us_timer_set(timer, timerCallback, std::min(waitMs, timerMaxPeriodMs), 0);
+
+#if DEBUG_ALLOCATIONS
+    static unsigned int x = 0;
+    x++;
+    if (x % (1024 / timerPeriodMs) == 0) {
+      printSizeDist();
+    }
+#endif
+  }
+};
+
 int main(int argc, char **argv) {
   if (argc != 2 && argc != 3) {
     std::cerr << "Usage: ./ts-server [data path] [port=9001]" << std::endl;
@@ -38,39 +67,10 @@ int main(int argc, char **argv) {
 
   us_listen_socket_t *appListenSocket = 0;
 
-  static constexpr unsigned int timerPeriodMs = 16;
   struct us_timer_t *timer =
       us_create_timer((us_loop_t *)MainLoop::getInstance().loop, 0, sizeof(&appListenSocket));
   *static_cast<us_listen_socket_t ***>(us_timer_ext(timer)) = &appListenSocket;
-  us_timer_set(
-      timer,
-      [](struct us_timer_t *timer) {
-        if (SignalHandler::getInstance().shouldExit()) {
-          us_listen_socket_t *&appListenSocket =
-              **static_cast<us_listen_socket_t ***>(us_timer_ext(timer));
-          if (appListenSocket) {
-            PubConnManager::getInstance().closeAll();
-            SubConnManager::getInstance().closeAll();
-            us_timer_close(timer);
-            us_listen_socket_close(false, appListenSocket);
-            appListenSocket = 0;
-          }
-        } else {
-          ReaderManager::getInstance().tick();
-          SubConnManager::getInstance().tick();
-
-#if DEBUG_ALLOCATIONS
-          static unsigned int x = 0;
-          x++;
-          if (x % (1024 / timerPeriodMs) == 0) {
-            printSizeDist();
-          }
-#endif
-        }
-      },
-      timerPeriodMs,
-      timerPeriodMs
-  );
+  us_timer_set(timer, timerCallback, timerMaxPeriodMs, 0);
 
   uWS::App::WebSocketBehavior<SubscriberConnection> subConfig = {
       .compression = uWS::DEDICATED_COMPRESSOR_256KB,
@@ -169,11 +169,16 @@ int main(int argc, char **argv) {
       Instant endTime = parseTime(getQuery("end", ""));
       std::uint64_t head = std::stoull(getQuery("head", "18446744073709551615"));
       std::uint64_t tail = std::stoull(getQuery("tail", "18446744073709551615"));
+      bool replayRealtime = getQuery("replay_realtime", "") == "1";
+      bool printFirstEventTime = getQuery("print_first_event_time", "") == "1";
       std::string jqQuery = getQuery("jq", "");
 
       if (head != 18446744073709551615ull && tail != 18446744073709551615ull) {
         throw BadRequestException("Cannot specify both head and tail");
       }
+
+      std::chrono::microseconds minDelay =
+          replayRealtime ? Instant::now() - beginTime : SubSpec::disabledMinDelay;
 
       Stream *&stream = streams[streamKey];
       if (stream == 0) {
@@ -188,6 +193,8 @@ int main(int argc, char **argv) {
                   .endTime = endTime,
                   .head = head,
                   .tail = tail,
+                  .minDelay = minDelay,
+                  .printFirstEventTime = printFirstEventTime,
                   .jqQuery = jqQuery
               }
           ),
