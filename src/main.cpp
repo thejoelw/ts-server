@@ -169,16 +169,13 @@ int main(int argc, char **argv) {
       Instant endTime = parseTime(getQuery("end", ""));
       std::uint64_t head = std::stoull(getQuery("head", "18446744073709551615"));
       std::uint64_t tail = std::stoull(getQuery("tail", "18446744073709551615"));
-      bool replayRealtime = getQuery("replay_realtime", "") == "1";
-      bool printFirstEventTime = getQuery("print_first_event_time", "") == "1";
+      bool prefixTimestamp = getQuery("prefix_timestamp", "") == "1";
+      double replaySpeed = std::stod(getQuery("replay_speed", "infinity"));
       std::string jqQuery = getQuery("jq", "");
 
       if (head != 18446744073709551615ull && tail != 18446744073709551615ull) {
         throw BadRequestException("Cannot specify both head and tail");
       }
-
-      std::chrono::microseconds minDelay =
-          replayRealtime ? Instant::now() - beginTime : SubSpec::disabledMinDelay;
 
       Stream *&stream = streams[streamKey];
       if (stream == 0) {
@@ -193,10 +190,11 @@ int main(int argc, char **argv) {
                   .endTime = endTime,
                   .head = head,
                   .tail = tail,
-                  .minDelay = minDelay,
-                  .printFirstEventTime = printFirstEventTime,
+                  .replayStartTime = Instant::now(),
+                  .replaySpeed = replaySpeed,
                   .jqQuery = jqQuery
-              }
+              },
+              MessageFormatter(prefixTimestamp)
           ),
           req->getHeader("sec-websocket-key"),
           req->getHeader("sec-websocket-protocol"),
