@@ -37,7 +37,7 @@ file(GLOB USOCKETS_OBJS third_party/uWebSockets/uSockets/*.o)
 
 add_executable(ts-server ${SOURCES})
 
-target_compile_definitions(ts-server PRIVATE "MAX_LOADED_CHUNKS=$<IF:$<CONFIG:Release>,16,4>")
+target_compile_definitions(ts-server PRIVATE "MAX_LOADED_CHUNKS=2")
 
 set_property(TARGET ts-server PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 target_link_libraries(ts-server PUBLIC PkgConfig::ZSTD PkgConfig::ZLIB PkgConfig::JEMALLOC PkgConfig::JQ ${USOCKETS_OBJS})

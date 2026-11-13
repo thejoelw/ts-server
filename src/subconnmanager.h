@@ -21,6 +21,8 @@ public:
   // Returns the number of milliseconds to wait before the next tick
   unsigned int tick();
 
+  const std::vector<SubscriberConnection *> &getConnections() const { return connections; }
+
 private:
   std::vector<SubscriberConnection *> connections;
   std::vector<SubscriberConnection *> closeQueue;
