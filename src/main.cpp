@@ -1,5 +1,6 @@
 ﻿#include <fstream>
 #include <iostream>
+#include <string>
 #include <unordered_map>
 
 #include <uWebSockets/src/App.h>
@@ -48,12 +49,15 @@ void timerCallback(struct us_timer_t *timer) {
 };
 
 int main(int argc, char **argv) {
-  if (argc != 2 && argc != 3) {
-    std::cerr << "Usage: ./ts-server [data path] [port=9001]" << std::endl;
+  if (argc < 2 || argc > 4) {
+    std::cerr << "Usage: ./ts-server [data path] [port=9001] [host=0.0.0.0]" << std::endl;
     return 1;
   }
 
-  unsigned int port = argc == 3 ? std::stoi(argv[2]) : 9001;
+  unsigned int port = argc >= 3 ? std::stoi(argv[2]) : 9001;
+  // Default preserves the previous all-interfaces behaviour; the systemd unit
+  // passes 127.0.0.1 so only Caddy can reach it.
+  std::string host = argc >= 4 ? argv[3] : "0.0.0.0";
 
   Options::getMutableOptions().dataPath = argv[1];
   while (Options::getMutableOptions().dataPath.back() == '/') {
@@ -290,11 +294,12 @@ int main(int argc, char **argv) {
   app.ws<SubscriberConnection>("/sub", std::move(subConfig))
       .ws<PublisherConnection>("/pub", std::move(pubConfig))
       .listen(
+          host,
           port,
-          [&appListenSocket, port](us_listen_socket_t *listenSocket) {
+          [&appListenSocket, host, port](us_listen_socket_t *listenSocket) {
             appListenSocket = listenSocket;
             if (listenSocket) {
-              std::cout << "Listening on port " << port << std::endl;
+              std::cout << "Listening on " << host << ":" << port << std::endl;
             }
           }
       )
