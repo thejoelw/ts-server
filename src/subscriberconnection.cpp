@@ -1,15 +1,21 @@
 #include "subscriberconnection.h"
 
+#include <format>
+
 #include "stream.h"
 #include "subconnmanager.h"
 
 SubscriberConnection::SubscriberConnection()
-    : nextChunkId(static_cast<std::size_t>(-1))
+    : messageFormatter(false)
+    , nextChunkId(static_cast<std::size_t>(-1))
     , nextEventId(static_cast<std::size_t>(-1)) {}
 
-SubscriberConnection::SubscriberConnection(Stream *stream, SubSpec spec)
+SubscriberConnection::SubscriberConnection(
+    Stream *stream, SubSpec spec, MessageFormatter messageFormatter
+)
     : stream(stream)
-    , spec(spec)
+    , spec(std::move(spec))
+    , messageFormatter(std::move(messageFormatter))
     , nextChunkId(stream->getInitChunkId(spec.beginTime))
     , nextEventId(
           nextChunkId < stream->getNumChunks()
@@ -58,13 +64,9 @@ SubWsConn::SendStatus SubscriberConnection::emit(Event event) {
     emitQueue.clear();
   }
 
-  if (spec.printFirstEventTime) {
-    std::cerr << "First event time: " << event.time.toUint64() << " microseconds" << std::endl;
-    spec.printFirstEventTime = false;
-  }
-
-  if (spec.minDelay != SubSpec::disabledMinDelay) {
-    std::chrono::microseconds wait = spec.minDelay - (Instant::now() - event.time);
+  if (spec.replaySpeed != std::numeric_limits<double>::infinity()) {
+    auto wait =
+        (event.time - spec.beginTime) / spec.replaySpeed - (Instant::now() - spec.replayStartTime);
     std::int64_t waitMs = std::chrono::duration_cast<std::chrono::milliseconds>(wait).count();
     if (waitMs > 0) {
       tickDelayMs = std::min<std::uint64_t>(waitMs, static_cast<unsigned int>(-1));
@@ -81,7 +83,9 @@ SubWsConn::SendStatus SubscriberConnection::emit(Event event) {
   // Apply JQ filter if configured
   if (jqProcessor) {
     status = SubWsConn::SendStatus::SUCCESS;
-    jqProcessor->process(eventStr, [this, &status](std::string_view data) {
+    jqProcessor->process(eventStr, [this, &status, timestamp = event.time](std::string_view data) {
+      data = messageFormatter.format(data, timestamp);
+
       if (status != SubWsConn::SendStatus::SUCCESS) {
         emitQueue.emplace_back(data);
         return;
@@ -97,6 +101,7 @@ SubWsConn::SendStatus SubscriberConnection::emit(Event event) {
       }
     });
   } else {
+    eventStr = messageFormatter.format(eventStr, event.time);
     status = wsConn->send(eventStr, uWS::OpCode::BINARY, true);
   }
 

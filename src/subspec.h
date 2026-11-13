@@ -11,9 +11,8 @@ public:
   std::uint64_t head = 0;
   std::uint64_t tail = 0;
 
-  static constexpr std::chrono::microseconds disabledMinDelay = std::chrono::microseconds::min();
-  std::chrono::microseconds minDelay = disabledMinDelay;
-  bool printFirstEventTime = false;
+  Instant replayStartTime = Instant::epoch();
+  double replaySpeed = std::numeric_limits<double>::infinity();
 
   std::string jqQuery;
 };

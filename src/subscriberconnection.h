@@ -5,6 +5,7 @@
 
 #include "event.h"
 #include "jqprocessor.h"
+#include "messageformatter.h"
 #include "subspec.h"
 
 #include "uWebSockets/src/App.h"
@@ -18,12 +19,13 @@ typedef uWS::WebSocket<false, true, SubscriberConnection> SubWsConn;
 class SubscriberConnection {
 public:
   SubscriberConnection();
-  SubscriberConnection(Stream *topic, SubSpec spec);
+  SubscriberConnection(Stream *topic, SubSpec spec, MessageFormatter messageFormatter);
 
   SubWsConn *wsConn = 0;
 
   Stream *stream = 0;
   SubSpec spec;
+  MessageFormatter messageFormatter;
   std::unique_ptr<JqProcessor> jqProcessor;
 
   std::size_t nextChunkId;
